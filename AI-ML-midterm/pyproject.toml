@@ -1,0 +1,22 @@
+[project]
+name = "ai-ml-midterm"
+version = "1.0.0"
+description = "Can ML Beat the Market? — 전산물리 중간 프로젝트"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.2",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scikit-learn>=1.4",
+    "scipy>=1.13",
+    "yfinance>=0.2.40",
+    "matplotlib>=3.9",
+    "PySide6>=6.7",
+]
+
+[project.scripts]
+midterm = "main_app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
