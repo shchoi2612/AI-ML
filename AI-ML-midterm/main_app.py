@@ -13,10 +13,13 @@ import traceback
 import numpy as np
 import pandas as pd
 
+import matplotlib
+import matplotlib.colors as mcolors
+matplotlib.rcParams['font.family'] = 'Malgun Gothic'
+matplotlib.rcParams['axes.unicode_minus'] = False
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget,
@@ -321,7 +324,7 @@ class DataTab(QWidget):
     def _placeholder(self):
         self.fig.clear()
         ax = self.fig.add_subplot(1, 1, 1)
-        ax.text(0.5, 0.5, "📥  데이터 다운로드 버튼을 눌러 시작하세요",
+        ax.text(0.5, 0.5, "데이터 다운로드 버튼을 눌러 시작하세요",
                 ha="center", va="center", fontsize=15, color="#9E9E9E",
                 transform=ax.transAxes)
         ax.axis("off")

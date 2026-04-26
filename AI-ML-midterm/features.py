@@ -14,8 +14,14 @@ def rsi(close: pd.Series, period: int = 14) -> pd.Series:
     loss = -delta.clip(upper=0)
     avg_gain = gain.ewm(com=period - 1, min_periods=period).mean()
     avg_loss = loss.ewm(com=period - 1, min_periods=period).mean()
-    rs = avg_gain / avg_loss.replace(0, np.nan)
-    return (100 - 100 / (1 + rs)).rename("RSI_14")
+    # avg_loss=0 → 순상승(RSI=100), avg_gain=0 → 순하락(RSI=0)
+    rsi_val = pd.Series(np.where(
+        avg_loss == 0, 100.0,
+        np.where(avg_gain == 0, 0.0,
+                 100 - 100 / (1 + avg_gain / avg_loss))
+    ), index=close.index)
+    rsi_val[avg_gain.isna() | avg_loss.isna()] = np.nan
+    return rsi_val.rename("RSI_14")
 
 
 def bollinger_pct_b(close: pd.Series, period: int = 20, num_std: float = 2.0) -> pd.Series:
