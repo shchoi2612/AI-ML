@@ -3,7 +3,7 @@
 
 **과목**: 전산물리 (Computational Physics) — 부산대학교 물리학과  
 **제출**: Week 8 중간 프로젝트 (Part I: Weeks 1–7 학습 내용 응용)  
-**마감**: PRD/TRD 2026-04-21 | 유튜브 영상 2026-04-28 | GitHub 코드 TBD
+**마감**: PRD/TRD 2026-04-21 ✅ | YouTube 영상 2026-04-28 | GitHub 코드 제출 완료
 
 ---
 
@@ -41,8 +41,8 @@ Week 1–7에서 배운 핵심 개념들:
 
 | # | 목표 | 관련 수업 내용 |
 |---|------|--------------|
-| O1 | TensorFlow MLP로 주가 방향성 예측 | Week 3–4: Neural Network |
-| O2 | Dropout/Regularization으로 과적합 방지 | Week 5: Regularization |
+| O1 | PyTorch MLP로 주가 방향성 예측 | Week 3–4: Neural Network |
+| O2 | Dropout/EarlyStopping으로 과적합 방지 | Week 5: Regularization |
 | O3 | K-Means로 시장 Regime 감지 (비지도학습) | Week 2: K-Means 군집화 |
 | O4 | Kelly Criterion + ML 포지션 사이징 | Week 2: 지도학습 응용 |
 | O5 | Markowitz 포트폴리오 최적화 (샤프 최대화) | 특강: Markowitz, Sharpe |
@@ -65,24 +65,35 @@ Week 1–7에서 배운 핵심 개념들:
 - 백테스트 기간: 2015-01-01 ~ 2024-12-31 (약 10년)
 - 전처리: 수익률, 로그수익률, Min-Max 정규화 (Week 2: 정규화)
 
-### F2. 전략 A — TensorFlow MLP + Kelly Criterion
-- **Week 3–5 직접 응용**: MLP로 다음 5일 방향성(상승/하락) 분류
+### F2. 전략 A — PyTorch MLP + Kelly Criterion
+- **Week 3–5 직접 응용**: MLP로 다음 방향성(상승/하락) 이진 분류
+- 구조: Dense(128) → Dropout(0.3) → Dense(64) → Dense(1, sigmoid)
+- Lookback 60일 시퀀스 입력 → P(상승) 확률 출력
 - 예측 확률 p → Kelly 공식 `f* = (p - q) / b` 으로 포지션 크기 결정
-- Dropout 적용 (Week 5: 과적합 방지)
 
 ### F3. 전략 B — Markowitz 포트폴리오 최적화
 - 샤프지수 최대화 포트폴리오: S&P500 + NASDAQ + 필라델피아 반도체
 - scipy.optimize로 최적 비중 월별 리밸런싱
+- Look-ahead bias 방지: 전월 데이터로만 비중 계산
 
 ### F4. ML Regime Detection (K-Means 비지도학습)
-- **Week 2 K-Means 직접 응용**: 시장 상태를 Bull/Bear/Sideways 3분류
+- **Week 2 K-Means 직접 응용**: 시장 상태를 Bull/Sideways/Bear 3분류
 - 핵심 피처: **변동성 클러스터링** (고변동성 → 고변동성 지속, ARCH 효과)
-- Regime에 따라 전략 A/B 자동 전환
+- Silhouette Score로 클러스터 품질 평가
 
 ### F5. 백테스트 & 비교 분석
-- 4가지 비교: 전략A(Kelly+MLP) vs 전략B(Markowitz) vs ML+Regime vs Buy&Hold
+- 4가지 비교: 전략A(Kelly+MLP) vs 전략B(Markowitz) vs Regime Switch vs Buy&Hold
 - 성과 지표: 샤프지수, 최대낙폭(MDD), CAGR, 누적수익률
-- 시각화: 누적수익률 곡선, Drawdown, 피처 중요도
+- 시각화: 누적수익률 곡선, Drawdown
+
+### F6. 실전 투자 신호 (today_signal.py)
+- 매일 최신 데이터로 Markowitz 최적 비중 재계산 (1Y / 6M 윈도우)
+- 포트폴리오 원금 기준 원화 투자금액 자동 계산 (환경변수 `PORTFOLIO_KRW` 조정 가능)
+- 5가지 조건 체크 → 🟢BUY / 🟡CAUTION / 🔴AVOID 신호 출력
+- 신호 이력 저장 + 이전 신호 수익률 자동 검증
+- 행동강령: 손절가 / 원화 투자금액 / 리밸런싱 금액 자동 계산
+- Discord Webhook 알림 (`DISCORD_WEBHOOK_URL` 환경변수 설정 시 활성화)
+- cron으로 평일 22:30 KST 자동 실행 (미장 개장 30분 전)
 
 ### F6. 실전 투자 신호 (today_signal.py)
 - 매일 최신 데이터로 Markowitz 최적 비중 재계산 (1Y / 6M 윈도우)
@@ -99,7 +110,7 @@ Week 1–7에서 배운 핵심 개념들:
 | 지표 | 기준 | 근거 |
 |------|------|------|
 | MLP 방향성 예측 Accuracy | > 55% | Kelly 양수 기대값 조건 |
-| 과적합 방지 | Test Accuracy ≥ Train - 5% | Week 5: Regularization 효과 |
+| 과적합 여부 | Train/Test loss 곡선 괴리 | Week 5: Regularization 효과 |
 | 결론 명확성 | EMH 지지 또는 반박 중 하나 | 어느 결과든 과학적으로 유효 |
 | 코드 재현성 | GitHub에서 end-to-end 실행 | 과제 제출 기준 |
 | 시각화 | 그래프 최소 4개 이상 | YouTube 영상 콘텐츠 |
@@ -111,7 +122,6 @@ Week 1–7에서 배운 핵심 개념들:
 - 공개 데이터만 사용 (No premium API)
 - 미래 데이터 사용 금지 (Look-ahead bias 방지)
 - 거래비용 미반영 (단순화 허용, 명시적 언급 필요)
-- TensorFlow 사용 (수업 표준 스택 준수)
 
 ---
 
@@ -120,5 +130,5 @@ Week 1–7에서 배운 핵심 개념들:
 | 날짜 | 마일스톤 |
 |------|----------|
 | 2026-04-21 | PRD + TRD 제출 ✅ |
-| 2026-04-28 (예정) | YouTube 소개영상 10분 제출 |
-| TBD | GitHub 코드 링크 제출 |
+| 2026-04-28 | YouTube 소개영상 10분 제출 |
+| 2026-04-27 | GitHub 코드 제출 ✅ |

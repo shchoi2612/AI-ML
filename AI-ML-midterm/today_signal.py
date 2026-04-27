@@ -30,7 +30,7 @@ from backtest import sharpe_ratio, max_drawdown, cagr
 # ────────────────────────────────────────────
 RF_ANNUAL       = 0.02
 ASSETS          = ["sp500", "nasdaq", "sox"]
-ASSET_NAMES     = {"sp500": "S&P500", "nasdaq": "NASDAQ", "sox": "SOX(반도체)"}
+ASSET_NAMES     = {"sp500": "S&P500", "nasdaq": "NASDAQ", "sox": "SOX"}
 PORTFOLIO_KRW   = int(os.environ.get("PORTFOLIO_KRW", 10_000_000))
 HISTORY_FILE    = Path(__file__).parent / "signal_history.csv"
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "")
@@ -154,7 +154,8 @@ def validate_last_signal(prices: pd.DataFrame) -> tuple:
 def send_discord(signal_code: str, signal_line: str,
                  suggest: np.ndarray, sharpe_1y: float,
                  vix: float, passed: int, port_1m: float,
-                 validation: str | None) -> None:
+                 validation: str | None,
+                 action: str | None = None) -> None:
     if not DISCORD_WEBHOOK:
         print("  ℹ️  DISCORD_WEBHOOK_URL 미설정 — 알림 건너뜀")
         return
@@ -164,10 +165,10 @@ def send_discord(signal_code: str, signal_line: str,
 
     weight_lines, krw_lines = [], []
     for i, a in enumerate(ASSETS):
-        weight_lines.append(f"`{ASSET_NAMES[a][:6]:6}` {suggest[i]*100:5.1f}%")
+        weight_lines.append(f"`{ASSET_NAMES[a]:6}` {suggest[i]*100:5.1f}%")
         amt = int(suggest[i] * PORTFOLIO_KRW)
         if amt > 0:
-            krw_lines.append(f"{ASSET_NAMES[a][:5]}: **{amt:,}원**")
+            krw_lines.append(f"{ASSET_NAMES[a]}: **{amt:,}원**")
     cash_pct = max(0.0, 1 - suggest.sum())
     weight_lines.append(f"`{'CASH':6}` {cash_pct*100:5.1f}%")
     krw_lines.append(f"현금: **{int(cash_pct * PORTFOLIO_KRW):,}원**")
@@ -187,6 +188,9 @@ def send_discord(signal_code: str, signal_line: str,
     if validation:
         fields.append({"name": "🔍 이전 신호 검증",
                        "value": validation, "inline": False})
+    if action:
+        fields.append({"name": "📋 오늘 행동강령",
+                       "value": action, "inline": False})
 
     payload = json.dumps({
         "embeds": [{
@@ -201,7 +205,8 @@ def send_discord(signal_code: str, signal_line: str,
     try:
         req = urllib.request.Request(
             DISCORD_WEBHOOK, data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json",
+                     "User-Agent": "DiscordBot (custom, 1.0)"},
             method="POST"
         )
         with urllib.request.urlopen(req, timeout=10):
@@ -441,6 +446,24 @@ print(f"\n{'='*62}")
 print(f"  SAVE & NOTIFY")
 print(f"{'='*62}")
 save_signal(signal_code, w_1y, sh_1y, vix_now, passed, prices)
+
+# 행동강령 요약 (Discord용)
+_action_lines = [f"리스크: **{risk_level}** (VIX {vix_now:.1f})"]
+if sox_ovheat:
+    _action_lines.append(f"⚠️ SOX 단기 과열 {sox_1m:+.1f}% — 분할매수 권고")
+if wt_shift:
+    _action_lines.append("⚠️ 6M vs 1Y 비중 차이 큼 — 리밸런싱 검토")
+if passed >= 4:
+    invest_amt = int((1 - cash_pct) * PORTFOLIO_KRW)
+    _action_lines.append(f"**신규:** {int((1-cash_pct)*100)}% 투자 → {invest_amt:,}원")
+    _action_lines.append("SOX 과열 중 → 2~3일 분할매수" if sox_ovheat else "오늘 바로 진입 가능")
+    _action_lines.append(f"손절 기준: -{STOP_LOSS_PCT*100:.0f}% 이탈 시 재검토")
+elif passed == 3:
+    _action_lines.append(f"**신규:** 최대 50%만 진입 → {int(0.5*PORTFOLIO_KRW):,}원 이하")
+else:
+    _action_lines.append("**신규:** 진입 금지 — 전액 현금 보유")
+action_msg = "\n".join(_action_lines)
+
 send_discord(signal_code, signal_line, suggest,
-             sh_1y, vix_now, passed, port_1m, validation_msg)
+             sh_1y, vix_now, passed, port_1m, validation_msg, action_msg)
 print(f"{'='*62}\n")

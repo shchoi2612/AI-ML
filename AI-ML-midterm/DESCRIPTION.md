@@ -14,7 +14,7 @@
 ## 실행 방법
 
 ```bash
-cd /home/dullear/install/AI-ML/AI-ML-midterm
+cd /home/dullear/aicoursework/AI-ML-midterm
 
 # GUI (4탭 분석 도구)
 uv run main_app.py
@@ -102,7 +102,25 @@ Markowitz 기반으로 매일 실행 가능한 실전 신호 스크립트.
 2. **최적 비중** — 1Y / 6M 윈도우 Sharpe 최대화 비중
 3. **시장 상태** — VIX 수준, 포트폴리오 모멘텀
 4. **5가지 조건 체크** → 🟢BUY / 🟡CAUTION / 🔴AVOID
-5. **행동 강령** — 신규/기존 보유자별 구체적 액션 플랜
+5. **행동강령** — 신규/기존 보유자별 구체적 액션 플랜 (과열 경고, 손절가 포함)
+6. **Discord 웹훅 알림** — 신호 + 비중 + 행동강령 자동 전송
+7. **신호 이력 저장** — `signal_history.csv`에 누적, 이전 신호 수익률 자동 검증
+
+### 자동화 (cron)
+평일 매일 22:30 KST(미장 개장 30분 전) 자동 실행:
+```bash
+# cron 등록 (이미 설정됨)
+30 13 * * 1-5 DISCORD_WEBHOOK_URL="..." uv run python today_signal.py
+
+# WSL 사용 시 cron 서비스 시작 필요
+sudo service cron start
+```
+
+### Discord 알림 설정
+```bash
+export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+uv run python today_signal.py
+```
 
 ### 샤프지수 해석 가이드
 
@@ -171,7 +189,8 @@ K-Means Regime 감지        PyTorch MLP 학습
 | `strategy_kelly.py` | Kelly Criterion 4가지 변형 (LongOnly/LS/CF/LS+CF) |
 | `strategy_markowitz.py` | Markowitz 샤프 최대화 포트폴리오 |
 | `backtest.py` | Buy&Hold 계산 + 성과 지표 테이블 |
-| `today_signal.py` | Markowitz 기반 오늘 투자 신호 + 행동 강령 |
+| `today_signal.py` | Markowitz 기반 오늘 투자 신호 + 행동강령 + Discord 웹훅 알림 |
+| `signal_history.csv` | 날짜별 신호 이력 저장 (누적 적중률 자동 검증) |
 | `DESCRIPTION.md` | 이 파일 — 프로젝트 전체 설명 |
 
 ---

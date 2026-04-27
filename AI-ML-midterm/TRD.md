@@ -2,7 +2,7 @@
 ### 기술 요구사항 문서 — ML 기반 EMH 검증 시스템
 
 **과목**: 전산물리 (Computational Physics) — 부산대학교 물리학과  
-**Week 8 중간 프로젝트** | 기술 스택: TensorFlow · NumPy · SciPy · Matplotlib · uv
+**Week 8 중간 프로젝트** | 기술 스택: PyTorch · NumPy · SciPy · PySide6 · uv
 
 ---
 
@@ -15,13 +15,13 @@
 [Preprocessing]            수익률, 로그수익률, Min-Max 정규화  (← Week2: 정규화)
         │
         ▼
-[Feature Engineering]      기술지표 + 변동성 클러스터링 피처
+[Feature Engineering]      기술지표 + 변동성 클러스터링 피처 (13개)
         │
         ├──────────────────────────────────────────────┐
         ▼                                              ▼
 [Regime Detector]                             [Direction Predictor]
- K-Means (비지도, Week2)                       TensorFlow MLP (Week3-5)
- Bull / Bear / Sideways                        P(상승) 확률 출력
+ K-Means (비지도, Week2)                       PyTorch MLP (Week3-5)
+ Bull / Sideways / Bear                        P(상승) 확률 출력
         │                                              │
         └──────────────────┬───────────────────────────┘
                            ▼
@@ -50,14 +50,13 @@
 | ^IXIC | NASDAQ Composite | 전략B 구성 |
 | ^SOX | Philadelphia Semiconductor | 전략B 구성 (교수님 추천) |
 | ^VIX | CBOE Volatility Index | 변동성 클러스터링 피처 |
-| ^KS11 | KOSPI (선택) | 전략A 확장 시 사용 |
 
 ### 2.2 전처리 파이프라인
 
 ```python
 # Week 2: 수익률 + 정규화 수업 내용 직접 적용
-r_t      = (P_t - P_{t-1}) / P_{t-1}          # 일반 수익률
-lr_t     = np.log(P_t / P_{t-1})              # 로그수익률
+r_t      = (P_t - P_{t-1}) / P_{t-1}           # 일반 수익률
+lr_t     = np.log(P_t / P_{t-1})               # 로그수익률
 X_norm   = (X - X.min()) / (X.max() - X.min()) # Min-Max 정규화
 
 # 결측치: forward-fill → drop
@@ -111,70 +110,89 @@ from sklearn.cluster import KMeans
 features = ['RV_21d', 'Vol_Zscore', 'VIX_Level', 'MA200_ratio']
 kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
 regime_labels = kmeans.fit_predict(X_vol_features)
-# → 클러스터 특성 분석 후 Bull/Bear/Sideways 레이블 할당
+# → 클러스터 특성 분석 후 Bull/Sideways/Bear 레이블 할당
 ```
 
-### 4.2 방향성 예측 모델 — TensorFlow MLP
+**실측 결과 (2015–2024)**
+
+| 국면 | 일수 | 비율 |
+|------|------|------|
+| Bull | 2,708 | 77.3% |
+| Sideways | 738 | 21.1% |
+| Bear | 55 | 1.6% |
+
+Silhouette Score: **0.50**
+
+### 4.2 방향성 예측 모델 — PyTorch MLP
 
 **Week 3–5 핵심 개념 종합 적용**
 
 ```
-입력: 기술지표 + 변동성 피처 (lookback=60일)
+입력: 기술지표 + 변동성 피처 13개 (lookback=60일 시퀀스)
 출력: P(상승) 확률 → Kelly f* 계산에 사용
 ```
 
 **모델 구조 (Week 3: MLP + Week 5: Dropout)**
 
 ```python
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu', input_shape=[n_features]),
-    tf.keras.layers.Dropout(0.3),          # Week5: 과적합 방지
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dropout(0.2),          # Week5: Regularization
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.Dense(1, activation='sigmoid')  # P(상승)
-])
+import torch.nn as nn
 
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),  # Week4: Adam
-    loss='binary_crossentropy',
-    metrics=['accuracy']
+model = nn.Sequential(
+    nn.Linear(n_features, 128),
+    nn.ReLU(),
+    nn.Dropout(0.3),          # Week5: 과적합 방지
+    nn.Linear(128, 64),
+    nn.ReLU(),
+    nn.Linear(64, 1),
+    nn.Sigmoid()              # P(상승)
 )
+
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.BCELoss()
 ```
 
 **학습 설정**
 
 ```python
-history = model.fit(
-    X_train, y_train,
-    epochs=100,
-    batch_size=32,
-    validation_split=0.2,          # 검증셋으로 과적합 모니터링
-    callbacks=[
-        tf.keras.callbacks.EarlyStopping(patience=10),  # Week5 응용
-    ]
-)
+# EarlyStopping + 80/20 Train/Validation 분할
+# Epoch: 100 (기본값, GUI에서 조정 가능)
+# Batch size: 32
 ```
 
-**목표 성능**: Test Accuracy > 55%  
-(55% 이상이면 Kelly 공식에서 양수 기대값 → 장기적 수익 가능)
+**실측 성능 (2022–2024 테스트 구간)**
+
+| 지표 | 값 | 해석 |
+|------|-----|------|
+| ROC AUC | ~0.47 | 랜덤(0.5)보다 낮음 |
+| Test Accuracy | ~58% | 강세장 편향 — 실질적 예측력 없음 |
+| P(up) 최솟값 | 0.54 | 하락 예측 0회 |
+
+> **발견**: 강세장 구간(2022–2024)에서 MLP가 "항상 오른다"로 수렴. 약형 EMH 지지.
 
 ---
 
 ## 5. 전략 구현
 
-### 5.1 전략 A — TensorFlow MLP + Kelly Criterion
+### 5.1 전략 A — PyTorch MLP + Kelly Criterion
 
 ```python
 # MLP 예측 확률
-p = model.predict(X_test)[:, 0]   # P(상승)
+p = predict_proba(model, scaler, X_test)  # P(상승)
 q = 1 - p
 
-# 분수 Kelly (1/4 Kelly: 과도한 베팅 방지)
-kelly_f = (p * 1.0 - q) / 1.0     # b=1 (1:1 배팅)
-position_size = kelly_f * 0.25     # 1/4 Kelly
-position_size = np.clip(position_size, 0, 0.5)  # 최대 50%
+# Kelly 공식 (b=1, Long-Only)
+kelly_f = p - q                            # f* = p - q
+position_size = np.clip(kelly_f, 0, 1)   # 음수 포지션 제거
 ```
+
+**4가지 변형 비교**
+
+| 변형 | 설명 | 결과 |
+|------|------|------|
+| Long-Only | f* > 0 시 매수 | Sharpe 0.075 |
+| Long-Short | f* < 0 시 숏 | Sharpe 0.075 (숏 신호 無) |
+| Confidence Filter | 확률 임계값 필터 | Sharpe 0.075 (전부 통과) |
+| LS + CF | 두 조건 결합 | Sharpe 0.075 |
 
 ### 5.2 전략 B — Markowitz 포트폴리오 (샤프 최대화)
 
@@ -194,13 +212,12 @@ result = minimize(
     constraints={'type': 'eq', 'fun': lambda w: sum(w) - 1}
 )
 # 자산: S&P500 / NASDAQ / 필라델피아 반도체
+# 월별 리밸런싱, Look-ahead bias 방지
 ```
 
 ### 5.3 Regime 기반 전략 전환
 
 ```python
-# Bull/Sideways → 안정적 분산 전략
-# Bear → ML 방향성 예측으로 현금 대피 또는 숏
 if regime in ['Bull', 'Sideways']:
     use_strategy = 'Markowitz'
 else:  # Bear
@@ -219,8 +236,6 @@ Test Window  : 63일  (분기)
 Step         : 63일씩 롤링 → Look-ahead bias 완전 차단
 ```
 
-미래 데이터 참조 금지: 각 시점의 모델은 해당 시점 이전 데이터로만 학습.
-
 ### 6.2 성과 지표
 
 ```python
@@ -228,34 +243,44 @@ def sharpe_ratio(returns, rf=0.02/252):
     excess = returns - rf
     return excess.mean() / excess.std() * np.sqrt(252)
 
-def max_drawdown(cum_returns):
-    peak = cum_returns.cummax()
-    return ((cum_returns - peak) / peak).min()
+def max_drawdown(returns):
+    cum = (1 + returns).cumprod()
+    peak = cum.cummax()
+    return ((cum - peak) / peak).min()
 
-def cagr(cum_returns, n_years):
-    return (cum_returns.iloc[-1]) ** (1 / n_years) - 1
+def cagr(returns):
+    cum = (1 + returns).cumprod()
+    n_years = len(returns) / 252
+    return cum.iloc[-1] ** (1 / n_years) - 1
 ```
+
+### 6.3 실측 백테스트 결과 (2015–2024, 약 10년)
+
+| 전략 | Sharpe | MDD | CAGR | 누적수익률 |
+|------|--------|-----|------|----------|
+| S&P500 Buy & Hold | 0.611 | -33.9% | 11.7% | 421% |
+| NASDAQ Buy & Hold | 0.707 | -36.4% | 15.3% | 744% |
+| SOX Buy & Hold | 0.675 | -46.5% | 19.1% | 1,274% |
+| **Markowitz (월리밸)** | **0.637** | -39.8% | **14.5%** | **664%** |
+| Kelly+MLP | 0.157 | -5.5% | 2.6% | 7.8% |
 
 ---
 
 ## 7. 기술 스택
 
-| 분류 | 라이브러리 | 수업 연결 |
-|------|-----------|----------|
-| ML 프레임워크 | `tensorflow` | Week 1–5 표준 스택 |
-| 수치 계산 | `numpy` | 전체 |
-| 데이터 처리 | `pandas` | — |
-| 최적화 | `scipy.optimize` | Markowitz |
-| 군집화 | `scikit-learn` (KMeans) | Week 2 |
-| 데이터 수집 | `yfinance` | — |
-| 시각화 | `matplotlib`, `seaborn` | — |
-| 패키지 관리 | `uv` | 수업 표준 |
+| 분류 | 라이브러리 |
+|------|-----------|
+| ML 프레임워크 | `torch` (PyTorch) |
+| 수치 계산 | `numpy` |
+| 데이터 처리 | `pandas` |
+| 최적화 | `scipy.optimize` |
+| 군집화 | `scikit-learn` (KMeans) |
+| 데이터 수집 | `yfinance` |
+| GUI | `PySide6` |
+| 시각화 | `matplotlib` |
+| 패키지 관리 | `uv` |
 
-**Python**: 3.12+  
-**기존 코드 참고**:
-- `trading_backup_20260324/kor/backtest.py` — 백테스트 로직
-- `trading_backup_20260324/nas/screening.py` — 종목 스크리닝
-- `AIandMLcourse/week2/01_linear_regression_spring.py` — TF 학습 패턴 참고
+**Python**: 3.12+
 
 ---
 
@@ -265,16 +290,16 @@ def cagr(cum_returns, n_years):
 AI-ML-midterm/
 ├── PRD.md
 ├── TRD.md
-├── main_app.py          # PySide6 GUI 진입점 (4탭)
-├── data.py              # yfinance 수집 + 전처리
-├── features.py          # 피처 엔지니어링 (변동성 클러스터링)
-├── regime.py            # K-Means Regime Detector
-├── model_torch.py       # PyTorch MLP 방향성 예측 모델
-├── strategy_kelly.py    # 전략 A: Kelly + MLP (4변형)
-├── strategy_markowitz.py # 전략 B: Markowitz 최적화
-├── backtest.py          # Backtester + 성과 지표
-├── today_signal.py      # 실전 투자 신호 (매일 실행)
-└── signal_history.csv   # 신호 히스토리 (자동 생성)
+├── DESCRIPTION.md           # 프로젝트 전체 설명
+├── main_app.py              # PySide6 GUI 진입점 (4탭)
+├── data.py                  # yfinance 수집 + 전처리
+├── features.py              # 피처 엔지니어링 (13개)
+├── regime.py                # K-Means Regime Detector
+├── model_torch.py           # PyTorch MLP 방향성 예측 모델
+├── strategy_kelly.py        # 전략 A: Kelly + MLP (4변형)
+├── strategy_markowitz.py    # 전략 B: Markowitz 최적화
+├── backtest.py              # Backtester + 성과 지표
+└── today_signal.py          # 실전 투자 신호 (매일 실행)
 ```
 
 ---
@@ -283,9 +308,6 @@ AI-ML-midterm/
 
 ```
 yfinance (최신 데이터)
-    │
-    ▼
-signal_history.csv 로드
     │
     ▼
 이전 신호 수익률 검증 (전일 비중 × 오늘 가격변화)
@@ -298,7 +320,7 @@ Markowitz 최적 비중 계산 (1Y / 6M 윈도우)
     │
     ├── 포트폴리오 원화 배분 (PORTFOLIO_KRW 기준)
     ├── 손절가 계산 (-10% 기준)
-    └── 행동 강령 (신규/기존 보유자 분기)
+    └── 행동강령 (신규/기존 보유자 분기)
     │
     ▼
 signal_history.csv 저장  +  Discord Webhook 알림
@@ -309,75 +331,49 @@ signal_history.csv 저장  +  Discord Webhook 알림
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `PORTFOLIO_KRW` | `10000000` | 투자 원금 (원화) |
-| `DISCORD_WEBHOOK_URL` | (없음) | Discord Webhook URL |
+| `DISCORD_WEBHOOK_URL` | (없음) | Discord Webhook URL (미설정 시 알림 건너뜀) |
+
+### 자동화 (cron)
+
+```bash
+# 평일 22:30 KST (미장 개장 30분 전) 자동 실행
+30 13 * * 1-5 DISCORD_WEBHOOK_URL="..." /path/to/uv run python today_signal.py
+```
 
 ---
 
-## 10. GitHub Actions 자동화
-
-```yaml
-# .github/workflows/daily_signal.yml
-on:
-  schedule:
-    - cron: '0 0 * * 1-5'   # 매일 09:00 KST (UTC+9), 평일
-  workflow_dispatch:          # 수동 실행 허용
-```
-
-### 실행 흐름
-
-```
-GitHub Actions (ubuntu-latest)
-    │
-    ├── checkout 코드
-    ├── uv 설치 (캐시 활용)
-    ├── uv run python today_signal.py
-    │       └── DISCORD_WEBHOOK_URL → Discord 알림 전송
-    └── signal_history.csv → git commit & push
-```
-
-### Discord Webhook 설정 방법
-1. Discord 서버 → 채널 설정 → Integrations → Webhooks → New Webhook
-2. Webhook URL 복사
-3. GitHub 저장소 → Settings → Secrets → Actions → `DISCORD_WEBHOOK_URL` 등록
-
-### GitHub Actions 비용
-- Public 저장소: **무료 (무제한)**
-- Private 저장소: 월 2,000분 무료 — 1회 실행 약 2분 × 22일 = 44분/월 (여유)
-
----
-
-## 9. 검증 계획
+## 10. 검증 계획
 
 | 단계 | 방법 |
 |------|------|
 | 데이터 검증 | 결측치 0%, 날짜 정렬, 수익률 분포 확인 |
-| 과적합 검증 | Train vs Test accuracy 차이 ≤ 5% (Week 5 기준) |
+| 과적합 검증 | Loss/Accuracy Curve 시각화 (Train vs Val 괴리 확인) |
 | 피처 검증 | 변동성 자기상관 ACF plot (클러스터링 존재 확인) |
-| Regime 검증 | 3 클러스터 분리도, Silhouette Score |
-| 백테스트 검증 | Look-ahead bias check, 거래 로그 검토 |
-| 최종 검증 | 4전략 비교표 + 시각화 정상 출력 |
+| Regime 검증 | Silhouette Score, VIX vs RV 산점도 |
+| 백테스트 검증 | Look-ahead bias check, Walk-Forward 롤링 구조 |
+| 최종 검증 | 4전략 비교표 + 누적수익률 그래프 정상 출력 |
 
 ---
 
-## 10. EMH 결론 판단 기준
+## 11. EMH 결론 판단 기준
 
 | 결과 | 해석 |
 |------|------|
-| ML 전략 < Buy&Hold | **EMH 지지** — 교수님 주장 맞음, 공개 정보로 초과수익 불가 |
-| ML 전략 > Buy&Hold | **약형 EMH 반례** — 단, 과적합 가능성 명시적으로 논의 필요 |
-| Regime 전환 시만 개선 | 변동성 예측 가능성 → 부분적 시장 비효율성 존재 |
+| ML 전략 < Buy&Hold | **EMH 지지** — 공개 정보로 초과수익 불가 |
+| ML 전략 > Buy&Hold | **약형 EMH 반례** — 과적합 가능성 명시적 논의 필요 |
+| Markowitz > Buy&Hold (S&P500) | 타이밍 예측이 아닌 자산배분으로 초과수익 가능 |
 
-> **결론은 열린 질문이다.** 어느 결과가 나오든 데이터가 말하는 대로 보고하는 것이 목표. ML이 시장을 이기든 지든, Week 1–7의 핵심 개념(지도학습, MLP, Regularization, K-Means)을 실제 금융 데이터에 적용한 과정 자체가 이 프로젝트의 학문적 가치다.
+**실측 결론**: Kelly+MLP는 Buy&Hold 미달 → **약형 EMH 지지**. Markowitz는 S&P500 대비 CAGR +2.8%p 초과 → **자산배분 이론 유효**.
 
 ---
 
-## 11. YouTube 영상 구성안 (10분)
+## 12. YouTube 영상 구성안 (10분)
 
 | 시간 | 내용 |
 |------|------|
 | 0:00–1:00 | 프로젝트 소개 + EMH 개념 (교수님 특강 연결) |
 | 1:00–2:30 | 데이터 + 피처 설명 (변동성 클러스터링 시각화) |
-| 2:30–4:00 | TF MLP 모델 구조 + 학습 과정 (Week 3–5 연결) |
+| 2:30–4:00 | PyTorch MLP 모델 구조 + 학습 과정 (Week 3–5 연결) |
 | 4:00–5:30 | K-Means Regime 감지 결과 (Week 2 연결) |
 | 5:30–8:00 | 백테스트 결과 — 4전략 비교 (누적수익률 그래프) |
 | 8:00–9:30 | EMH 검증 결론 — 데이터가 말하는 것 |
