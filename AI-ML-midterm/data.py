@@ -18,7 +18,7 @@ TRAIN_END = "2021-12-31"
 TEST_START = "2022-01-01"
 
 
-def download_prices(start: str = "2015-01-01", end: str = "2024-12-31") -> pd.DataFrame:
+def download_prices(start: str = "2010-01-01", end: str = "2024-12-31") -> pd.DataFrame:
     """모든 티커의 종가 다운로드."""
     raw = yf.download(
         list(TICKERS.values()),
@@ -50,7 +50,7 @@ def minmax_normalize(series: pd.Series) -> pd.Series:
     return (series - mn) / (mx - mn)
 
 
-def build_dataset(start: str = "2015-01-01", end: str = "2024-12-31") -> dict:
+def build_dataset(start: str = "2010-01-01", end: str = "2024-12-31") -> dict:
     prices = download_prices(start, end)
     returns = compute_returns(prices)
     return {"prices": prices, "returns": returns}

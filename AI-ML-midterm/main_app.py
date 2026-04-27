@@ -15,7 +15,7 @@ import pandas as pd
 
 import matplotlib
 import matplotlib.colors as mcolors
-matplotlib.rcParams['font.family'] = 'Malgun Gothic'
+matplotlib.rcParams['font.family'] = 'DejaVu Sans'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 from matplotlib.figure import Figure
@@ -99,13 +99,13 @@ class DataWorker(QObject):
         try:
             from data import build_dataset
             from features import build_features
-            self.log_msg.emit("📥 yfinance에서 데이터 다운로드 중...")
+            self.log_msg.emit("📥 Downloading data from yfinance...")
             ds = build_dataset(self.start, self.end)
             self.log_msg.emit(f"  ✔ prices: {ds['prices'].shape}")
-            self.log_msg.emit("🔧 피처 엔지니어링 중...")
+            self.log_msg.emit("🔧 Engineering features...")
             feat = build_features(ds["prices"], ds["returns"])
             self.log_msg.emit(f"  ✔ features: {feat.shape}  ({', '.join(feat.columns[:4])} ...)")
-            self.log_msg.emit("✅ 완료!")
+            self.log_msg.emit("✅ Done!")
             self.finished.emit({"ds": ds, "features": feat})
         except Exception as e:
             self.error.emit(traceback.format_exc())
@@ -125,14 +125,14 @@ class RegimeWorker(QObject):
     def run(self):
         try:
             from regime import run_regime_detection
-            self.log_msg.emit("🔍 K-Means (n=3) 학습 중...")
+            self.log_msg.emit("🔍 Training K-Means (n=3)...")
             regimes, km, scaler, sil = run_regime_detection(self.features)
             counts = regimes.value_counts().to_dict()
             self.log_msg.emit(f"  Silhouette Score: {sil:.4f}")
-            self.log_msg.emit(f"  Bull:     {counts.get('Bull', 0)}일")
-            self.log_msg.emit(f"  Sideways: {counts.get('Sideways', 0)}일")
-            self.log_msg.emit(f"  Bear:     {counts.get('Bear', 0)}일")
-            self.log_msg.emit("✅ Regime 감지 완료!")
+            self.log_msg.emit(f"  Bull:     {counts.get('Bull', 0)} days")
+            self.log_msg.emit(f"  Sideways: {counts.get('Sideways', 0)} days")
+            self.log_msg.emit(f"  Bear:     {counts.get('Bear', 0)} days")
+            self.log_msg.emit("✅ Regime detection complete!")
             self.finished.emit({"regimes": regimes, "km": km, "scaler": scaler, "sil": sil})
         except Exception as e:
             self.error.emit(traceback.format_exc())
@@ -156,12 +156,12 @@ class TrainWorker(QObject):
         try:
             from model_torch import prepare_sequences, train_model, predict_proba, split_train_test
             sp_ret = self.ds["returns"]["sp500_ret"].reindex(self.features.index)
-            self.log_msg.emit("🔄 시퀀스 준비 중 (lookback=60)...")
+            self.log_msg.emit("🔄 Preparing sequences (lookback=60)...")
             X, y, dates = prepare_sequences(self.features, sp_ret)
             X_tr, y_tr, X_te, y_te, d_tr, d_te = split_train_test(X, y, dates)
             self.log_msg.emit(f"  Train: {len(X_tr)} / Test: {len(X_te)} samples")
-            self.log_msg.emit(f"  상승 비율 — Train: {y_tr.mean():.2%}  Test: {y_te.mean():.2%}")
-            self.log_msg.emit(f"\n🧠 PyTorch MLP 학습 시작 (epochs={self.epochs})")
+            self.log_msg.emit(f"  Up ratio — Train: {y_tr.mean():.2%}  Test: {y_te.mean():.2%}")
+            self.log_msg.emit(f"\n🧠 Starting PyTorch MLP training (epochs={self.epochs})")
 
             def cb(ep, tot, tl, vl, ta, va):
                 self.epoch_update.emit(ep, tot, tl, vl, ta, va)
@@ -210,15 +210,15 @@ class BacktestWorker(QObject):
             from strategy_kelly import kelly_positions, backtest_kelly
             from model_torch import prepare_sequences, predict_proba
 
-            self.log_msg.emit("📈 Buy & Hold 계산...")
+            self.log_msg.emit("📈 Calculating Buy & Hold...")
             self.progress.emit(10)
             bh = buy_and_hold(self.ds["prices"])
 
-            self.log_msg.emit("📊 Markowitz 포트폴리오 계산...")
+            self.log_msg.emit("📊 Calculating Markowitz portfolio...")
             self.progress.emit(30)
             mw = backtest_markowitz(self.ds["prices"])
 
-            self.log_msg.emit("🤖 Kelly+MLP 전략 적용...")
+            self.log_msg.emit("🤖 Applying Kelly+MLP strategy...")
             self.progress.emit(50)
             sp_ret = self.ds["returns"]["sp500_ret"].reindex(self.features.index)
             X, y, dates = prepare_sequences(self.features, sp_ret)
@@ -226,12 +226,11 @@ class BacktestWorker(QObject):
             pos = kelly_positions(probs)
             kelly_ret = backtest_kelly(sp_ret, pos, dates)
 
-            self.log_msg.emit("🌐 Regime 기반 전략 전환...")
+            self.log_msg.emit("🌐 Building regime-based strategy...")
             self.progress.emit(70)
-            # Regime 전략: Bull/Sideways → Markowitz, Bear → Kelly
             regime_ret = _build_regime_strategy(kelly_ret, mw, self.regimes)
 
-            self.log_msg.emit("📋 성과 지표 계산...")
+            self.log_msg.emit("📋 Calculating performance metrics...")
             self.progress.emit(90)
             strategies = {
                 "Buy&Hold":  bh,
@@ -242,7 +241,7 @@ class BacktestWorker(QObject):
             tbl = performance_table(strategies)
             self.progress.emit(100)
             self.log_msg.emit("\n" + tbl.to_string())
-            self.log_msg.emit("\n✅ 백테스트 완료!")
+            self.log_msg.emit("\n✅ Backtest complete!")
             self.finished.emit({"strategies": strategies, "table": tbl})
         except Exception as e:
             self.error.emit(traceback.format_exc())
@@ -285,11 +284,11 @@ class DataTab(QWidget):
         left.setFixedWidth(230)
         lv = QVBoxLayout(left)
 
-        lv.addWidget(_label("데이터 수집 & 피처", bold=True, size=13))
-        lv.addWidget(_label("yfinance로 ^GSPC / ^IXIC\n^SOX / ^VIX 다운로드\n(2015–2024)", size=10))
+        lv.addWidget(_label("Data & Features", bold=True, size=13))
+        lv.addWidget(_label("S&P500, NASDAQ, SOX, VIX\nvia yfinance (2015-2024)", size=10))
         lv.addSpacing(8)
 
-        self.btn_load = _btn("📥  데이터 다운로드")
+        self.btn_load = _btn("📥  Download Data")
         self.btn_load.clicked.connect(self._on_load)
         lv.addWidget(self.btn_load)
         lv.addSpacing(4)
@@ -299,7 +298,7 @@ class DataTab(QWidget):
         self.progress.setVisible(False)
         lv.addWidget(self.progress)
 
-        lv.addWidget(_label("로그:"))
+        lv.addWidget(_label("Log:"))
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
         self.log_box.setStyleSheet("font-size:11px;")
@@ -324,7 +323,7 @@ class DataTab(QWidget):
     def _placeholder(self):
         self.fig.clear()
         ax = self.fig.add_subplot(1, 1, 1)
-        ax.text(0.5, 0.5, "데이터 다운로드 버튼을 눌러 시작하세요",
+        ax.text(0.5, 0.5, "Click Download Data to start",
                 ha="center", va="center", fontsize=15, color="#9E9E9E",
                 transform=ax.transAxes)
         ax.axis("off")
@@ -356,7 +355,7 @@ class DataTab(QWidget):
         self._thread.quit()
         self.progress.setVisible(False)
         self.btn_load.setEnabled(True)
-        self.log_box.append(f"[오류]\n{msg}")
+        self.log_box.append(f"[Error]\n{msg}")
 
     def _draw(self, ds: dict, feat: pd.DataFrame):
         self.fig.clear()
@@ -378,7 +377,7 @@ class DataTab(QWidget):
 
         ax4 = self.fig.add_subplot(3, 2, 4)
         ax4.plot(prices["vix"], color="#c62828")
-        ax4.set_title("VIX (변동성 지수)")
+        ax4.set_title("VIX (Volatility Index)")
 
         ax5 = self.fig.add_subplot(3, 2, 5)
         ax5.plot(feat["RSI_14"], color="#6a1b9a")
@@ -389,7 +388,7 @@ class DataTab(QWidget):
 
         ax6 = self.fig.add_subplot(3, 2, 6)
         ax6.plot(feat["RV_21d"], color="#37474f")
-        ax6.set_title("실현변동성 21일 (연환산)")
+        ax6.set_title("Realized Volatility 21d (Annualized)")
         ax6.set_ylabel("Vol")
 
         for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
@@ -415,7 +414,7 @@ class RegimeTab(QWidget):
         self._ds = result["ds"]
         self._feat = result["features"]
         self.btn_run.setEnabled(True)
-        self.log_box.append("✔ 데이터 준비 완료. Regime 감지를 실행하세요.")
+        self.log_box.append("✔ Data ready. Run Regime detection.")
 
     def _build_ui(self):
         root = QHBoxLayout(self)
@@ -426,11 +425,11 @@ class RegimeTab(QWidget):
         left.setFixedWidth(230)
         lv = QVBoxLayout(left)
 
-        lv.addWidget(_label("Regime 감지 (K-Means)", bold=True, size=13))
-        lv.addWidget(_label("Week 2: K-Means 비지도학습\n변동성 피처로\nBull / Sideways / Bear 분류", size=10))
+        lv.addWidget(_label("Regime Detection (K-Means)", bold=True, size=13))
+        lv.addWidget(_label("Week 2: K-Means Unsupervised\nUsing volatility features\nBull / Sideways / Bear", size=10))
         lv.addSpacing(8)
 
-        self.btn_run = _btn("🔍  K-Means 실행", color="#00695c")
+        self.btn_run = _btn("🔍  Run K-Means", color="#00695c")
         self.btn_run.setEnabled(False)
         self.btn_run.clicked.connect(self._on_run)
         lv.addWidget(self.btn_run)
@@ -441,7 +440,7 @@ class RegimeTab(QWidget):
         self.progress.setVisible(False)
         lv.addWidget(self.progress)
 
-        lv.addWidget(_label("로그:"))
+        lv.addWidget(_label("Log:"))
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
         self.log_box.setStyleSheet("font-size:11px;")
@@ -464,7 +463,7 @@ class RegimeTab(QWidget):
     def _placeholder(self):
         self.fig.clear()
         ax = self.fig.add_subplot(1, 1, 1)
-        ax.text(0.5, 0.5, "먼저 Tab 1에서 데이터를 다운로드하세요",
+        ax.text(0.5, 0.5, "Download data in Tab 1 first",
                 ha="center", va="center", fontsize=14, color="#9E9E9E",
                 transform=ax.transAxes)
         ax.axis("off")
@@ -498,7 +497,7 @@ class RegimeTab(QWidget):
         self._thread.quit()
         self.progress.setVisible(False)
         self.btn_run.setEnabled(True)
-        self.log_box.append(f"[오류]\n{msg}")
+        self.log_box.append(f"[Error]\n{msg}")
 
     def _draw(self, regimes: pd.Series):
         self.fig.clear()
@@ -514,7 +513,7 @@ class RegimeTab(QWidget):
                                  prices["sp500"].min(), prices["sp500"].max(),
                                  where=prices.index.isin(regimes[mask].index),
                                  alpha=0.15, color=color, label=regime)
-        ax1.set_title("S&P500 가격 + Regime 배경")
+        ax1.set_title("S&P500 Price + Regime Background")
         ax1.legend(fontsize=8, loc="upper left")
         ax1.tick_params(axis="x", labelrotation=30, labelsize=8)
 
@@ -524,7 +523,7 @@ class RegimeTab(QWidget):
         colors = [REGIME_COLORS.get(r, "#999") for r in counts.index]
         ax2.pie(counts.values, labels=counts.index, colors=colors,
                 autopct="%1.1f%%", startangle=90)
-        ax2.set_title("Regime 분포")
+        ax2.set_title("Regime Distribution")
 
         # ── VIX vs RV_21d 산점도 ──
         ax3 = self.fig.add_subplot(2, 2, 4)
@@ -536,7 +535,7 @@ class RegimeTab(QWidget):
                         c=color, alpha=0.4, s=6, label=regime)
         ax3.set_xlabel("VIX Level")
         ax3.set_ylabel("RV_21d")
-        ax3.set_title("VIX vs 실현변동성 (Regime 색상)")
+        ax3.set_title("VIX vs Realized Volatility (Regime colors)")
         ax3.legend(fontsize=8)
 
         self.canvas.draw()
@@ -560,7 +559,7 @@ class TrainTab(QWidget):
         self._ds = result["ds"]
         self._feat = result["features"]
         self.btn_train.setEnabled(True)
-        self.log_box.append("✔ 데이터 준비 완료. 학습 시작 버튼을 누르세요.")
+        self.log_box.append("✔ Data ready. Click Train to start.")
 
     def _build_ui(self):
         root = QHBoxLayout(self)
@@ -572,12 +571,12 @@ class TrainTab(QWidget):
         left.setFixedWidth(250)
         lv = QVBoxLayout(left)
 
-        lv.addWidget(_label("PyTorch MLP 학습", bold=True, size=13))
-        lv.addWidget(_label("Week 3-5: MLP + Dropout\n+ EarlyStopping\n방향성 분류 (상승/하락)", size=10))
+        lv.addWidget(_label("PyTorch MLP Training", bold=True, size=13))
+        lv.addWidget(_label("Week 3-5: MLP + Dropout\n+ EarlyStopping\nDirection classifier (Up/Down)", size=10))
         lv.addSpacing(8)
 
         # 하이퍼파라미터
-        gb = _section("하이퍼파라미터")
+        gb = _section("Hyperparameters")
         form = QFormLayout(gb)
         self.spin_epochs = QSpinBox()
         self.spin_epochs.setRange(10, 500)
@@ -592,19 +591,19 @@ class TrainTab(QWidget):
         lv.addWidget(gb)
         lv.addSpacing(6)
 
-        self.btn_train = _btn("🧠  학습 시작", color="#e65100")
+        self.btn_train = _btn("🧠  Start Training", color="#e65100")
         self.btn_train.setEnabled(False)
         self.btn_train.clicked.connect(self._on_train)
         lv.addWidget(self.btn_train)
         lv.addSpacing(4)
 
-        lv.addWidget(_label("진행률:"))
+        lv.addWidget(_label("Progress:"))
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         lv.addWidget(self.progress)
         lv.addSpacing(4)
 
-        lv.addWidget(_label("로그:"))
+        lv.addWidget(_label("Log:"))
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
         self.log_box.setStyleSheet("font-size:10px;")
@@ -635,10 +634,10 @@ class TrainTab(QWidget):
             (self._ax_loss, "Loss Curve"),
             (self._ax_acc,  "Accuracy Curve"),
             (self._ax_roc,  "ROC Curve"),
-            (self._ax_prob, "예측 확률 분포"),
+            (self._ax_prob, "Predicted Probability Distribution"),
         ]:
             ax.set_title(title)
-            ax.text(0.5, 0.5, "학습 대기 중...", ha="center", va="center",
+            ax.text(0.5, 0.5, "Waiting for training...", ha="center", va="center",
                     fontsize=11, color="#9E9E9E", transform=ax.transAxes)
         self.canvas.draw()
 
@@ -681,7 +680,7 @@ class TrainTab(QWidget):
             self._ax_acc.cla()
             self._ax_acc.plot(epochs, self._history["train_acc"], label="train", color="#e65100")
             self._ax_acc.plot(epochs, self._history["val_acc"],   label="val",   color="#1565C0", ls="--")
-            self._ax_acc.axhline(0.55, color="green", lw=0.8, ls=":", label="55% 목표")
+            self._ax_acc.axhline(0.55, color="green", lw=0.8, ls=":", label="55% target")
             self._ax_acc.set_title("Accuracy Curve")
             self._ax_acc.legend(fontsize=8)
 
@@ -699,7 +698,7 @@ class TrainTab(QWidget):
     def _on_error(self, msg: str):
         self._thread.quit()
         self.btn_train.setEnabled(True)
-        self.log_box.append(f"[오류]\n{msg}")
+        self.log_box.append(f"[Error]\n{msg}")
 
     def _draw_test_results(self, result: dict):
         from sklearn.metrics import roc_curve, auc
@@ -719,11 +718,11 @@ class TrainTab(QWidget):
 
         # 확률 분포
         self._ax_prob.cla()
-        self._ax_prob.hist(probs[y_te == 1], bins=30, alpha=0.6, color="#2e7d32", label="상승(1)")
-        self._ax_prob.hist(probs[y_te == 0], bins=30, alpha=0.6, color="#c62828", label="하락(0)")
+        self._ax_prob.hist(probs[y_te == 1], bins=30, alpha=0.6, color="#2e7d32", label="Up(1)")
+        self._ax_prob.hist(probs[y_te == 0], bins=30, alpha=0.6, color="#c62828", label="Down(0)")
         self._ax_prob.axvline(0.5, color="black", lw=1, ls="--")
-        self._ax_prob.set_xlabel("P(상승)")
-        self._ax_prob.set_title(f"예측 확률 분포  (acc={result['acc']:.3f})")
+        self._ax_prob.set_xlabel("P(Up)")
+        self._ax_prob.set_title(f"Predicted Probability  (acc={result['acc']:.3f})")
         self._ax_prob.legend(fontsize=8)
 
         self.canvas.draw()
@@ -766,7 +765,7 @@ class BacktestTab(QWidget):
     def _check_ready(self):
         if self._model is not None and self._ds is not None:
             self.btn_run.setEnabled(True)
-            self.log_box.append("✔ 모델 준비 완료. 백테스트를 실행하세요.")
+            self.log_box.append("✔ Model ready. Run backtest.")
 
     def _build_ui(self):
         root = QHBoxLayout(self)
@@ -777,11 +776,11 @@ class BacktestTab(QWidget):
         left.setFixedWidth(230)
         lv = QVBoxLayout(left)
 
-        lv.addWidget(_label("백테스트 결과", bold=True, size=13))
-        lv.addWidget(_label("4전략 비교:\nBuy&Hold / Markowitz\nKelly+MLP / Regime 전환", size=10))
+        lv.addWidget(_label("Backtest Results", bold=True, size=13))
+        lv.addWidget(_label("4 Strategy Comparison:\nBuy&Hold / Markowitz\nKelly+MLP / Regime Switch", size=10))
         lv.addSpacing(8)
 
-        self.btn_run = _btn("📊  백테스트 실행", color="#6a1b9a")
+        self.btn_run = _btn("📊  Run Backtest", color="#6a1b9a")
         self.btn_run.setEnabled(False)
         self.btn_run.clicked.connect(self._on_run)
         lv.addWidget(self.btn_run)
@@ -791,13 +790,13 @@ class BacktestTab(QWidget):
         self.progress.setRange(0, 100)
         lv.addWidget(self.progress)
 
-        lv.addWidget(_label("성과 지표:"))
+        lv.addWidget(_label("Performance Metrics:"))
         self.table = QTableWidget()
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         lv.addWidget(self.table)
 
-        lv.addWidget(_label("로그:"))
+        lv.addWidget(_label("Log:"))
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
         self.log_box.setStyleSheet("font-size:10px;")
@@ -820,7 +819,7 @@ class BacktestTab(QWidget):
     def _placeholder(self):
         self.fig.clear()
         ax = self.fig.add_subplot(1, 1, 1)
-        ax.text(0.5, 0.5, "Tab 3 학습 완료 후 백테스트를 실행하세요",
+        ax.text(0.5, 0.5, "Complete Tab 3 training, then run backtest",
                 ha="center", va="center", fontsize=14, color="#9E9E9E",
                 transform=ax.transAxes)
         ax.axis("off")
@@ -856,7 +855,7 @@ class BacktestTab(QWidget):
     def _on_error(self, msg: str):
         self._thread.quit()
         self.btn_run.setEnabled(True)
-        self.log_box.append(f"[오류]\n{msg}")
+        self.log_box.append(f"[Error]\n{msg}")
 
     def _fill_table(self, df: pd.DataFrame):
         self.table.clear()
@@ -889,8 +888,8 @@ class BacktestTab(QWidget):
             dd = (cum - peak) / peak * 100
             ax2.plot(dd, label=name, color=color, lw=1.0, alpha=0.8)
 
-        ax1.set_title("누적수익률 비교 (4전략)")
-        ax1.set_ylabel("누적수익 배율")
+        ax1.set_title("Cumulative Returns (4 Strategies)")
+        ax1.set_ylabel("Cumulative Return (x)")
         ax1.axhline(1, color="gray", lw=0.6, ls="--")
         ax1.legend(fontsize=9)
         ax1.tick_params(axis="x", labelrotation=30, labelsize=8)
@@ -911,7 +910,7 @@ class BacktestTab(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Can ML Beat the Market? — 전산물리 중간 프로젝트")
+        self.setWindowTitle("Can ML Beat the Market? — Computational Physics Midterm")
         self.resize(1280, 820)
         self._build()
 
@@ -925,10 +924,10 @@ class MainWindow(QMainWindow):
         self.tab_train   = TrainTab()
         self.tab_backtest = BacktestTab()
 
-        tabs.addTab(self.tab_data,     "① 데이터 & 피처")
-        tabs.addTab(self.tab_regime,   "② Regime 감지")
-        tabs.addTab(self.tab_train,    "③ MLP 학습 (PyTorch)")
-        tabs.addTab(self.tab_backtest, "④ 백테스트 결과")
+        tabs.addTab(self.tab_data,     "① Data & Features")
+        tabs.addTab(self.tab_regime,   "② Regime Detection")
+        tabs.addTab(self.tab_train,    "③ MLP Training (PyTorch)")
+        tabs.addTab(self.tab_backtest, "④ Backtest Results")
 
         # 탭 간 데이터 연결
         self.tab_data.data_ready.connect(self.tab_regime.set_data)
@@ -946,8 +945,8 @@ class MainWindow(QMainWindow):
 
         # 상태바
         self.statusBar().showMessage(
-            "부산대학교 전산물리 중간 프로젝트 | "
-            "① 데이터 다운로드 → ② Regime 감지 → ③ MLP 학습 → ④ 백테스트"
+            "PNU Computational Physics Midterm | "
+            "① Download Data → ② Regime Detection → ③ MLP Training → ④ Backtest"
         )
 
 
