@@ -84,6 +84,14 @@ Week 1–7에서 배운 핵심 개념들:
 - 성과 지표: 샤프지수, 최대낙폭(MDD), CAGR, 누적수익률
 - 시각화: 누적수익률 곡선, Drawdown, 피처 중요도
 
+### F6. 실전 투자 신호 (today_signal.py)
+- 매일 최신 데이터로 Markowitz 최적 비중 재계산 (1Y / 6M 윈도우)
+- 포트폴리오 원금 기준 원화 투자금액 자동 계산 (기본 1,000만원, 환경변수 조정 가능)
+- 5가지 조건 체크 → 🟢BUY / 🟡CAUTION / 🔴AVOID 신호 출력
+- 신호 히스토리 저장 (`signal_history.csv`) + 이전 신호 수익률 자동 검증
+- 손절가 / 자산별 원화 투자금액 / 리밸런싱 금액 자동 계산
+- Discord Webhook 알림: 매일 오전 9시 GitHub Actions 자동 실행 (무료)
+
 ---
 
 ## 5. 성공 기준 (Success Metrics)

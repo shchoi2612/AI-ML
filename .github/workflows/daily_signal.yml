@@ -1,0 +1,37 @@
+name: Daily Market Signal
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'  # 매일 오전 9시 KST (UTC+9), 평일만
+  workflow_dispatch:         # 수동 실행 (GitHub Actions 탭에서 버튼 클릭)
+
+permissions:
+  contents: write  # signal_history.csv 커밋을 위한 쓰기 권한
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Run daily signal
+        working-directory: AI-ML-midterm
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PORTFOLIO_KRW: "10000000"
+        run: uv run python today_signal.py
+
+      - name: Commit signal history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add AI-ML-midterm/signal_history.csv
+          git diff --staged --quiet || git commit -m "chore: signal $(date +%Y-%m-%d) [skip ci]"
+          git push

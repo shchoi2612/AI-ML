@@ -265,16 +265,84 @@ def cagr(cum_returns, n_years):
 AI-ML-midterm/
 ├── PRD.md
 ├── TRD.md
-├── main.py              # 전체 파이프라인 실행 (단일 진입점)
+├── main_app.py          # PySide6 GUI 진입점 (4탭)
 ├── data.py              # yfinance 수집 + 전처리
 ├── features.py          # 피처 엔지니어링 (변동성 클러스터링)
 ├── regime.py            # K-Means Regime Detector
-├── model_tf.py          # TensorFlow MLP 방향성 예측 모델
-├── strategy_kelly.py    # 전략 A: Kelly + MLP
+├── model_torch.py       # PyTorch MLP 방향성 예측 모델
+├── strategy_kelly.py    # 전략 A: Kelly + MLP (4변형)
 ├── strategy_markowitz.py # 전략 B: Markowitz 최적화
-├── backtest.py          # Walk-Forward Backtester
-└── visualize.py         # 결과 시각화 (Sharpe, MDD, 누적수익률)
+├── backtest.py          # Backtester + 성과 지표
+├── today_signal.py      # 실전 투자 신호 (매일 실행)
+└── signal_history.csv   # 신호 히스토리 (자동 생성)
 ```
+
+---
+
+## 9. today_signal.py 아키텍처
+
+```
+yfinance (최신 데이터)
+    │
+    ▼
+signal_history.csv 로드
+    │
+    ▼
+이전 신호 수익률 검증 (전일 비중 × 오늘 가격변화)
+    │
+    ▼
+Markowitz 최적 비중 계산 (1Y / 6M 윈도우)
+    │
+    ▼
+5조건 체크 → 🟢BUY / 🟡CAUTION / 🔴AVOID
+    │
+    ├── 포트폴리오 원화 배분 (PORTFOLIO_KRW 기준)
+    ├── 손절가 계산 (-10% 기준)
+    └── 행동 강령 (신규/기존 보유자 분기)
+    │
+    ▼
+signal_history.csv 저장  +  Discord Webhook 알림
+```
+
+### 환경변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `PORTFOLIO_KRW` | `10000000` | 투자 원금 (원화) |
+| `DISCORD_WEBHOOK_URL` | (없음) | Discord Webhook URL |
+
+---
+
+## 10. GitHub Actions 자동화
+
+```yaml
+# .github/workflows/daily_signal.yml
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'   # 매일 09:00 KST (UTC+9), 평일
+  workflow_dispatch:          # 수동 실행 허용
+```
+
+### 실행 흐름
+
+```
+GitHub Actions (ubuntu-latest)
+    │
+    ├── checkout 코드
+    ├── uv 설치 (캐시 활용)
+    ├── uv run python today_signal.py
+    │       └── DISCORD_WEBHOOK_URL → Discord 알림 전송
+    └── signal_history.csv → git commit & push
+```
+
+### Discord Webhook 설정 방법
+1. Discord 서버 → 채널 설정 → Integrations → Webhooks → New Webhook
+2. Webhook URL 복사
+3. GitHub 저장소 → Settings → Secrets → Actions → `DISCORD_WEBHOOK_URL` 등록
+
+### GitHub Actions 비용
+- Public 저장소: **무료 (무제한)**
+- Private 저장소: 월 2,000분 무료 — 1회 실행 약 2분 × 22일 = 44분/월 (여유)
 
 ---
 
