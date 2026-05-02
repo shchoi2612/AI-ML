@@ -1,0 +1,20 @@
+# 가상환경
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# 개인 데이터 (포트폴리오·신호 이력)
+portfolio_state.csv
+signal_history.csv
+
+# 백테스트 결과 (크고 자주 바뀜 — 필요하면 별도 관리)
+backtest_result.json
+
+# 환경변수
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/

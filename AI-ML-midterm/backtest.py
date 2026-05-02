@@ -122,18 +122,142 @@ def buy_and_hold(prices: pd.DataFrame, ticker: str = "sp500") -> pd.Series:
     return prices[ticker].pct_change().dropna().rename("Buy&Hold")
 
 
+def save_backtest_result(prices: pd.DataFrame = None,
+                         path=None,
+                         include_kelly: bool = True) -> dict:
+    """
+    백테스트 결과를 backtest_result.json으로 저장.
+
+    저장 내용:
+      - markowitz / buy_and_hold / kelly_mlp: Sharpe, MDD, CAGR, 누적수익률
+      - daily_returns: 날짜별 일간 수익률
+      - cumulative_returns: 날짜-누적수익률 매핑 테이블 (진입일 수익률 계산용)
+      - excess_vs_bh: Markowitz ÷ Buy&Hold 상대 누적수익률
+
+    반환: 저장된 결과 dict
+    """
+    import json
+    from pathlib import Path as _Path
+    from datetime import date as _date
+    from strategy_markowitz import backtest_markowitz, backtest_markowitz_momentum
+
+    _returns_df = None
+    if prices is None:
+        from data import build_dataset
+        _ds = build_dataset()
+        prices = _ds["prices"]
+        _returns_df = _ds["returns"]
+    else:
+        from data import compute_returns
+        _returns_df = compute_returns(prices)
+
+    if path is None:
+        path = _Path(__file__).parent / "backtest_result.json"
+
+    bh   = buy_and_hold(prices)
+    mw   = backtest_markowitz(prices)
+    mwm  = backtest_markowitz_momentum(prices)
+
+    cum_mw  = (1 + mw).cumprod()
+    cum_bh  = (1 + bh).cumprod()
+    cum_mwm = (1 + mwm).cumprod()
+
+    common_idx = cum_mw.index.intersection(cum_bh.index)
+    excess_cum = (cum_mw.reindex(common_idx) / cum_bh.reindex(common_idx)).dropna()
+
+    result = {
+        "generated_at": str(_date.today()),
+        "markowitz": {
+            "sharpe": round(sharpe_ratio(mw), 4),
+            "mdd":    round(max_drawdown(mw), 4),
+            "cagr":   round(cagr(mw), 4),
+            "final_return": round(float(cum_mw.iloc[-1] - 1), 4),
+        },
+        "markowitz_momentum": {
+            "sharpe": round(sharpe_ratio(mwm), 4),
+            "mdd":    round(max_drawdown(mwm), 4),
+            "cagr":   round(cagr(mwm), 4),
+            "final_return": round(float(cum_mwm.iloc[-1] - 1), 4),
+        },
+        "buy_and_hold": {
+            "sharpe": round(sharpe_ratio(bh), 4),
+            "mdd":    round(max_drawdown(bh), 4),
+            "cagr":   round(cagr(bh), 4),
+            "final_return": round(float(cum_bh.iloc[-1] - 1), 4),
+        },
+        "daily_returns": {
+            "markowitz":          {str(d.date()): round(float(v), 6) for d, v in mw.items()},
+            "markowitz_momentum": {str(d.date()): round(float(v), 6) for d, v in mwm.items()},
+            "buy_and_hold":       {str(d.date()): round(float(v), 6) for d, v in bh.items()},
+        },
+        "cumulative_returns": {
+            "markowitz":          {str(d.date()): round(float(v), 6) for d, v in cum_mw.items()},
+            "markowitz_momentum": {str(d.date()): round(float(v), 6) for d, v in cum_mwm.items()},
+            "buy_and_hold":       {str(d.date()): round(float(v), 6) for d, v in cum_bh.items()},
+        },
+        "excess_vs_bh": {
+            str(d.date()): round(float(v), 6) for d, v in excess_cum.items()
+        },
+    }
+
+    # ── Kelly+MLP Walk-Forward (시간 소요: ~수 분) ──
+    if include_kelly:
+        try:
+            from features import build_features
+            print("  Kelly+MLP Walk-Forward 계산 중... (수 분 소요)")
+            feat    = build_features(prices, _returns_df)
+            sp_ret  = _returns_df["sp500_ret"].reindex(feat.index)
+            kelly   = walk_forward_kelly(feat, sp_ret).dropna()
+            if len(kelly) > 0:
+                cum_kelly = (1 + kelly).cumprod()
+                result["kelly_mlp"] = {
+                    "sharpe": round(sharpe_ratio(kelly), 4),
+                    "mdd":    round(max_drawdown(kelly), 4),
+                    "cagr":   round(cagr(kelly), 4),
+                    "final_return": round(float(cum_kelly.iloc[-1] - 1), 4),
+                }
+                result["cumulative_returns"]["kelly_mlp"] = {
+                    str(d.date()): round(float(v), 6) for d, v in cum_kelly.items()
+                }
+                result["daily_returns"]["kelly_mlp"] = {
+                    str(d.date()): round(float(v), 6) for d, v in kelly.items()
+                }
+                print(f"  ✅ Kelly+MLP: CAGR {result['kelly_mlp']['cagr']*100:.1f}%  "
+                      f"Sharpe {result['kelly_mlp']['sharpe']:.3f}  "
+                      f"MDD {result['kelly_mlp']['mdd']*100:.1f}%")
+        except Exception as e:
+            print(f"  ⚠️ Kelly+MLP 건너뜀: {e}")
+
+    with open(path, "w") as f:
+        json.dump(result, f, indent=2)
+
+    print(f"  ✅ backtest_result.json 저장 완료 → {path}")
+    print(f"     Markowitz         : CAGR {result['markowitz']['cagr']*100:.1f}%  "
+          f"Sharpe {result['markowitz']['sharpe']:.3f}  "
+          f"MDD {result['markowitz']['mdd']*100:.1f}%")
+    print(f"     Markowitz+Momentum: CAGR {result['markowitz_momentum']['cagr']*100:.1f}%  "
+          f"Sharpe {result['markowitz_momentum']['sharpe']:.3f}  "
+          f"MDD {result['markowitz_momentum']['mdd']*100:.1f}%")
+    print(f"     Buy&Hold          : CAGR {result['buy_and_hold']['cagr']*100:.1f}%  "
+          f"Sharpe {result['buy_and_hold']['sharpe']:.3f}  "
+          f"MDD {result['buy_and_hold']['mdd']*100:.1f}%")
+    return result
+
+
 if __name__ == "__main__":
     from data import build_dataset
-    from features import build_features
-    from strategy_markowitz import backtest_markowitz
+    from strategy_markowitz import backtest_markowitz, backtest_markowitz_momentum
 
+    print("백테스트 실행 중...")
     ds = build_dataset()
-    feat = build_features(ds["prices"], ds["returns"])
-    sp_ret = ds["returns"]["sp500_ret"].reindex(feat.index)
 
-    bh = buy_and_hold(ds["prices"])
-    mw = backtest_markowitz(ds["prices"])
+    bh  = buy_and_hold(ds["prices"])
+    mw  = backtest_markowitz(ds["prices"])
+    mwm = backtest_markowitz_momentum(ds["prices"])
 
-    strategies = {"Buy&Hold": bh, "Markowitz": mw}
+    strategies = {"Buy&Hold": bh, "Markowitz": mw, "Markowitz+Momentum": mwm}
     tbl = performance_table(strategies)
     print(tbl)
+
+    print()
+    save_backtest_result(ds["prices"])
