@@ -1,5 +1,0 @@
-이름: 최상현
-학번: 202312162
-학과: 물리학과
-
-GitHub 링크: https://github.com/shchoi2612/AI-ML/tree/main/week2
