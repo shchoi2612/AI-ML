@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from engine import new_game, apply_choice, check_game_over, select_event, generate_hint
 from events import EVENTS
 from narration import stream_narration
+from emh import analyze_emh
 
 app = FastAPI(title="EconSim API")
 
@@ -145,3 +146,13 @@ def get_narration(game_id: str, turn: int):
         yield "data: {\"type\": \"done\"}\n\n"
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+# ── Phase 3: EMH 성적표 ──
+
+@app.get("/game/{game_id}/emh-summary")
+def get_emh_summary(game_id: str):
+    session = sessions.get(game_id)
+    if not session:
+        raise HTTPException(404, "game not found")
+    return analyze_emh(session["state"])
