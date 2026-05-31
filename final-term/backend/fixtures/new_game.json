@@ -1,0 +1,36 @@
+{
+    "game_id": "89307207-a15d-49f0-927f-f14cc2c56544",
+    "turn": 1,
+    "gauges": {
+        "debt": 50,
+        "inflation": 40,
+        "morale": 60,
+        "tension": 30
+    },
+    "etf_prices": {
+        "semiconductor": 100.0,
+        "energy": 100.0,
+        "finance": 100.0,
+        "defense": 100.0,
+        "consumer": 100.0
+    },
+    "event": {
+        "id": "strike_aftermath",
+        "title": "\ud30c\uc5c5 \ud6c4\uc18d \uc5ec\ud30c",
+        "desc": "\ub178\ub3d9 \ubd84\uc7c1 \uc774\ud6c4 \uae30\uc5c5\ub4e4\uc758 \ud574\uc678 \uc774\uc804 \uac80\ud1a0 \uc18c\uc2dd\uc774 \uc804\ud574\uc9c0\uace0 \uc788\uc2b5\ub2c8\ub2e4.",
+        "choices": [
+            {
+                "label": "\uae30\uc5c5 \uc794\ub958 \uc778\uc13c\ud2f0\ube0c \ud328\ud0a4\uc9c0",
+                "hint": "\ubd80\ucc44 \ub300\ud3ed \uc99d\uac00 / \uc778\ud50c\ub808\uc774\uc158 \uc18c\ud3ed \ud558\ub77d / \ubbfc\uc2ec \uc0c1\ub2f9\ud788 \uac1c\uc120 \uc608\uc0c1"
+            },
+            {
+                "label": "\ub178\ub3d9 \uc720\uc5f0\uc131 \ubc95\uc548 \ucd94\uc9c4",
+                "hint": "\uc778\ud50c\ub808\uc774\uc158 \uc18c\ud3ed \ud558\ub77d / \ubbfc\uc2ec \ub300\ud3ed \uc545\ud654 \uc608\uc0c1"
+            },
+            {
+                "label": "\ud604\uc0c1 \uc720\uc9c0",
+                "hint": "\uc778\ud50c\ub808\uc774\uc158 \uc18c\ud3ed \uc0c1\uc2b9 / \ubbfc\uc2ec \uc0c1\ub2f9\ud788 \uc545\ud654 / \uad6d\uc81c\uae34\uc7a5\ub3c4 \uc18c\ud3ed \uace0\uc870 \uc608\uc0c1"
+            }
+        ]
+    }
+}
