@@ -1,0 +1,248 @@
+{
+  "_meta": {
+    "method": "게이지→섹터 모델 순위 vs 실제 역사 에피소드 순위, Spearman 순위상관",
+    "note": "ρ=1 완벽일치, 0 무관, -1 정반대. B-18 반영 전 측정."
+  },
+  "part_a_gauge_sensitivity": {
+    "tension": {
+      "real_episode": "러우 침공 (2022-02~03)",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ],
+      "current_model_order": [
+        "defense",
+        "energy",
+        "consumer",
+        "finance",
+        "semiconductor"
+      ],
+      "current_spearman": 0.8
+    },
+    "inflation": {
+      "real_episode": "2022 인플레/긴축기",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "finance",
+        "semiconductor"
+      ],
+      "current_model_order": [
+        "energy",
+        "defense",
+        "finance",
+        "semiconductor",
+        "consumer"
+      ],
+      "current_spearman": 0.7
+    },
+    "morale": {
+      "real_episode": "COVID 회복 랠리 (2020-03~08)",
+      "real_order": [
+        "semiconductor",
+        "energy",
+        "defense",
+        "finance",
+        "consumer"
+      ],
+      "current_model_order": [
+        "consumer",
+        "semiconductor",
+        "finance",
+        "energy",
+        "defense"
+      ],
+      "current_spearman": -0.3,
+      "proposed_model_order": [
+        "semiconductor",
+        "energy",
+        "finance",
+        "defense",
+        "consumer"
+      ],
+      "proposed_spearman": 0.9
+    }
+  },
+  "part_b_representative_events": [
+    {
+      "event_id": "nuclear_crisis",
+      "choice": "독자적 핵 억제력 개발 선언",
+      "description": "독자적 핵 억제력 개발 선언 — 긴장 고조(전쟁 패턴)",
+      "matched_gauge": "tension",
+      "avg_etf_pct": {
+        "semiconductor": -12.88,
+        "energy": 12.86,
+        "finance": -14.64,
+        "defense": 13.49,
+        "consumer": -4.94
+      },
+      "model_order": [
+        "defense",
+        "energy",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ],
+      "real_episode": "러우 침공 (2022-02~03)",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ],
+      "spearman": 0.9
+    },
+    {
+      "event_id": "global_recession",
+      "choice": "통화 완화 (양적 완화)",
+      "description": "통화 완화(양적완화) — 인플레 급등(긴축기 패턴)",
+      "matched_gauge": "inflation",
+      "avg_etf_pct": {
+        "semiconductor": -5.0,
+        "energy": 3.13,
+        "finance": -8.12,
+        "defense": -1.65,
+        "consumer": -5.91
+      },
+      "model_order": [
+        "energy",
+        "defense",
+        "semiconductor",
+        "consumer",
+        "finance"
+      ],
+      "real_episode": "2022 인플레/긴축기",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "finance",
+        "semiconductor"
+      ],
+      "spearman": 0.7
+    },
+    {
+      "event_id": "trade_boom",
+      "choice": "복지 예산 확대",
+      "description": "복지 예산 확대 — 민심/위험선호 상승(회복 랠리 패턴)",
+      "matched_gauge": "morale",
+      "avg_etf_pct": {
+        "semiconductor": 2.0,
+        "energy": 3.39,
+        "finance": 1.37,
+        "defense": -2.04,
+        "consumer": 4.56
+      },
+      "model_order": [
+        "consumer",
+        "energy",
+        "semiconductor",
+        "finance",
+        "defense"
+      ],
+      "real_episode": "COVID 회복 랠리 (2020-03~08)",
+      "real_order": [
+        "semiconductor",
+        "energy",
+        "defense",
+        "finance",
+        "consumer"
+      ],
+      "spearman": -0.2
+    }
+  ],
+  "part_b_with_proposed_morale": [
+    {
+      "event_id": "nuclear_crisis",
+      "choice": "독자적 핵 억제력 개발 선언",
+      "description": "독자적 핵 억제력 개발 선언 — 긴장 고조(전쟁 패턴)",
+      "matched_gauge": "tension",
+      "avg_etf_pct": {
+        "semiconductor": -10.39,
+        "energy": 15.09,
+        "finance": -14.62,
+        "defense": 16.51,
+        "consumer": -8.89
+      },
+      "model_order": [
+        "defense",
+        "energy",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ],
+      "real_episode": "러우 침공 (2022-02~03)",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ],
+      "spearman": 0.9
+    },
+    {
+      "event_id": "global_recession",
+      "choice": "통화 완화 (양적 완화)",
+      "description": "통화 완화(양적완화) — 인플레 급등(긴축기 패턴)",
+      "matched_gauge": "inflation",
+      "avg_etf_pct": {
+        "semiconductor": -4.14,
+        "energy": 3.97,
+        "finance": -8.14,
+        "defense": -0.37,
+        "consumer": -7.44
+      },
+      "model_order": [
+        "energy",
+        "defense",
+        "semiconductor",
+        "consumer",
+        "finance"
+      ],
+      "real_episode": "2022 인플레/긴축기",
+      "real_order": [
+        "energy",
+        "defense",
+        "consumer",
+        "finance",
+        "semiconductor"
+      ],
+      "spearman": 0.7
+    },
+    {
+      "event_id": "trade_boom",
+      "choice": "복지 예산 확대",
+      "description": "복지 예산 확대 — 민심/위험선호 상승(회복 랠리 패턴)",
+      "matched_gauge": "morale",
+      "avg_etf_pct": {
+        "semiconductor": 5.06,
+        "energy": 6.39,
+        "finance": 1.41,
+        "defense": 2.02,
+        "consumer": -0.37
+      },
+      "model_order": [
+        "energy",
+        "semiconductor",
+        "defense",
+        "finance",
+        "consumer"
+      ],
+      "real_episode": "COVID 회복 랠리 (2020-03~08)",
+      "real_order": [
+        "semiconductor",
+        "energy",
+        "defense",
+        "finance",
+        "consumer"
+      ],
+      "spearman": 0.9
+    }
+  ]
+}
