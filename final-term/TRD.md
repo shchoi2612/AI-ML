@@ -58,20 +58,23 @@ Request: `{"game_id": "uuid", "choice_index": 0}`
 }
 ```
 
-### GET /game/{game_id}/narration → SSE 스트리밍
+### GET /game/{game_id}/turn/{turn}/narration → SSE 스트리밍
 
-차트 업데이트 후 별도 요청. Groq 레이턴시를 hero 순간에서 분리.
+차트 업데이트 후 별도 요청 (action 응답의 turn 번호로 호출). Groq 레이턴시를 hero 순간에서
+분리. `Content-Type: text/event-stream`. 각 줄은 `data: {json}\n\n` 형식의 SSE 이벤트:
 
-```json
-{
-  "narration": "정부의 전략 비축유 방출 결정으로...",
-  "vn_dialogue": {
-    "speaker": "재무장관",
-    "portrait": "finance_minister",
-    "text": "각하, 비축유 방출은 단기적으로..."
-  }
-}
 ```
+data: {"type": "narration_chunk", "text": "정부의"}
+data: {"type": "narration_chunk", "text": " 전략 비축유"}
+...                                          ← 청크 반복 (스트리밍)
+data: {"type": "vn_dialogue", "speaker": "재무장관", "portrait": "finance_minister", "text": "각하, 비축유 방출은..."}
+data: {"type": "done"}
+```
+
+- `narration_chunk`: 뉴스 텍스트 조각, 도착 즉시 누적 렌더 (타이핑 효과)
+- `vn_dialogue`: 페르소나 말풍선 1개 (speaker/portrait는 서버가 랜덤 선택)
+- `done`: 스트림 종료 신호
+- Groq 실패 시: narration_chunk로 폴백 텍스트 1개 → vn_dialogue → done
 
 ### GET /game/{game_id}/emh-summary → EmhReport
 
@@ -79,13 +82,19 @@ Request: `{"game_id": "uuid", "choice_index": 0}`
 
 ```json
 {
-  "total_turns": 20,
-  "predictability_score": 0.73,
+  "total_turns": 19,
   "stability_score": 312,
-  "sector_correlations": {"semiconductor": 0.65, ...},
-  "summary_text": "당신의 정책은 시장에 73% 예측 가능한 패턴을..."
+  "predictability_score": 0.43,
+  "top_correlation": {"sector": "에너지 ETF", "value": 0.62},
+  "avg_etf_volatility": 3.21,
+  "summary_text": "임기 19개월 동안 당신의 정책은 시장에 43% 예측 가능한 패턴을..."
 }
 ```
+
+- `stability_score`: 0~400 (게이지 4개 안정도 합산)
+- `predictability_score`: 0~1 (전 섹터 상관 절대값 평균 = EMH 약형 위반 정도)
+- `top_correlation`: 가장 민감했던 섹터 1개 {한글 섹터명, 상관계수}
+- `avg_etf_volatility`: 평균 ETF 변동성 (%)
 
 ## 파일 구조
 
@@ -94,11 +103,18 @@ econ-game/
 ├── backend/
 │   ├── main.py              # FastAPI 라우터 + CORS
 │   ├── engine.py            # 게이지 계산, 이벤트 선택 (v1 재활용)
-│   ├── events.py            # 22개 이벤트 데이터 (v1 재활용)
+│   ├── events.py            # 23개 이벤트 데이터 (v1 재활용)
 │   ├── config.py            # 상수/임계값/민감도 (v1 재활용)
 │   ├── etf.py               # ETF 가격 계산 (v1 재활용)
 │   ├── narration.py         # Groq LLM 스트리밍 (v1 재활용)
 │   ├── emh.py               # EMH Pearson 분석 (신규)
+│   ├── data/                # 데이터 사실감 (B-15~17, 분석 전용)
+│   │   ├── fetch_etf.py            # yfinance 수집 → market_stats.json
+│   │   ├── event_study.py         # 역사적 사건 섹터 반응 → event_study.json
+│   │   ├── validate_sensitivity.py # Spearman 검증 → validation_report.json
+│   │   ├── policy_sector_mapping.md # 정책→섹터 인과 매핑 (B-18 스펙)
+│   │   └── requirements.txt        # yfinance/numpy/pandas (서버와 분리)
+│   ├── fixtures/            # 프론트 mock 모드용 계약 샘플
 │   ├── requirements.txt
 │   └── .env
 ├── frontend/
@@ -119,22 +135,23 @@ econ-game/
 │       └── portraits/        # AI 생성 포트레이트
 ├── PRD.md
 ├── TRD.md
-├── ref/                      # 기존 레포 + Streamlit v1
-└── v1-backup/
+└── plan.md                   # 데이터 사실감 방향 문서 (B-15~18)
 ```
+실제 위치: 위 트리는 `econ-game/final-term/` 아래. git root는 `econ-game/`이며
+`v1-backup/`(Streamlit fallback)은 root에 트래킹됨. `ref/`(폐기 RPG 원본)는 삭제됨.
 
 ## 의존성 (버전 고정)
 
-### backend/requirements.txt
+### backend/requirements.txt (서버 런타임)
 ```
 fastapi==0.115.0
 uvicorn==0.30.0
-groq==0.12.0
 python-dotenv==1.0.1
-numpy==1.26.4
-scipy==1.14.0
 pydantic==2.9.0
+groq>=0.15.0          # 0.12.0은 httpx proxies 버그 → 0.15+ 필수
 ```
+참고: `emh.py`는 순수 파이썬(Pearson 직접 구현)이라 scipy/numpy 불필요.
+numpy/pandas/yfinance는 데이터 분석 전용으로 `backend/data/requirements.txt`에 분리.
 
 ### frontend/package.json (핵심)
 ```
