@@ -238,6 +238,18 @@ hero 순간이 데모 가능한가? (정책 선택 → ETF 5종 차트 실시간
 | F-15 | Frontend | 추가 포트레이트 2~4장 (M2에서 1장으로 시작한 것 확장) | P3 | portraits/ 이미지 추가 |
 | X-01 | Both | Cross-review: 백엔드↔프론트 코드 리뷰 | P3 | 리뷰 코멘트 반영 |
 
+### Phase 3.5: 데이터 사실감 업그레이드 (W3~W4, 단독 백엔드)
+
+> 방향 근거: `plan.md`. 가상 게임을 실제 시장 데이터로 보정해 학술 타당성(validity)을 올린다.
+> 엔진 반영(B-18)은 **W2末 hero CHECKPOINT 통과 후**에만. 그 전엔 수집·분석까지만.
+
+| ID | 담당 | 태스크 | 우선순위 | 산출물 |
+|----|------|--------|----------|--------|
+| B-15 | Backend | yfinance 수집 스크립트 + 섹터 변동성·상관관계 추출 (XLE/XLF/SOXX/ITA/XLP, 2015~) | P3 | `data/fetch_etf.py`, `data/market_stats.json` |
+| B-16 | Backend | 정책→섹터 인과 매핑 테이블 초안 (23개 이벤트, 실제 데이터 대조) | P3 | `data/policy_sector_mapping.md` |
+| B-17 | Backend | 대표 이벤트 2~3개 인과 현실 고증 (금리 인상/전쟁 등) | P3 | 검증된 민감도 값 |
+| B-18 | Backend | 매핑 값을 config.py/engine.py에 반영 (기존 B-14 밸런싱 흡수) | P3 | 실제 데이터 기반 엔진 상수 |
+
 ### Phase 4: Ship (W5)
 
 | ID | 담당 | 태스크 | 우선순위 | 산출물 |

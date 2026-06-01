@@ -1,0 +1,115 @@
+{
+  "_meta": {
+    "source": "yfinance",
+    "sector_proxy": {
+      "semiconductor": "SOXX",
+      "energy": "XLE",
+      "finance": "XLF",
+      "defense": "ITA",
+      "consumer": "XLP"
+    },
+    "metric": "윈도우 누적수익률 % = (end종가/start종가 - 1)×100"
+  },
+  "episodes": [
+    {
+      "game_event": "전쟁 발발 / 국제긴장 고조",
+      "real_event": "러시아 우크라이나 침공",
+      "window": "2022-02-23 ~ 2022-03-08",
+      "expectation": "방산↑ 에너지↑ / 성장주(반도체)↓ 소비재 약세",
+      "sector_returns_pct": {
+        "semiconductor": -3.9,
+        "energy": 14.6,
+        "finance": -7.0,
+        "defense": 3.3,
+        "consumer": -3.1
+      },
+      "ranking_best_to_worst": [
+        "energy",
+        "defense",
+        "consumer",
+        "semiconductor",
+        "finance"
+      ]
+    },
+    {
+      "game_event": "팬데믹 / 민심 급락 패닉",
+      "real_event": "COVID-19 시장 붕괴",
+      "window": "2020-02-19 ~ 2020-03-23",
+      "expectation": "전 섹터↓, 소비재(방어주)가 상대적으로 덜 하락",
+      "sector_returns_pct": {
+        "semiconductor": -31.9,
+        "energy": -56.1,
+        "finance": -42.8,
+        "defense": -50.2,
+        "consumer": -24.2
+      },
+      "ranking_best_to_worst": [
+        "consumer",
+        "semiconductor",
+        "finance",
+        "defense",
+        "energy"
+      ]
+    },
+    {
+      "game_event": "금리 인상 / 긴축",
+      "real_event": "2022 연준 공격적 금리 인상기",
+      "window": "2022-01-03 ~ 2022-10-13",
+      "expectation": "금융 상대적 선방 / 성장주(반도체) 급락",
+      "sector_returns_pct": {
+        "semiconductor": -43.2,
+        "energy": 50.4,
+        "finance": -19.0,
+        "defense": -7.0,
+        "consumer": -9.1
+      },
+      "ranking_best_to_worst": [
+        "energy",
+        "defense",
+        "consumer",
+        "finance",
+        "semiconductor"
+      ]
+    },
+    {
+      "game_event": "유가 급등 충격",
+      "real_event": "2014~2016 유가 붕괴 (역방향 참고)",
+      "window": "2014-06-20 ~ 2016-02-11",
+      "expectation": "에너지 폭락 — 유가↔에너지 섹터 직결 확인용",
+      "sector_returns_pct": {
+        "semiconductor": -10.2,
+        "energy": -44.4,
+        "finance": -11.4,
+        "defense": -5.4,
+        "consumer": 13.6
+      },
+      "ranking_best_to_worst": [
+        "consumer",
+        "defense",
+        "semiconductor",
+        "finance",
+        "energy"
+      ]
+    },
+    {
+      "game_event": "팬데믹 회복 / 경기 반등",
+      "real_event": "COVID 저점 이후 회복 랠리",
+      "window": "2020-03-23 ~ 2020-08-31",
+      "expectation": "반도체(성장주)↑ 주도, 에너지 회복 지연",
+      "sector_returns_pct": {
+        "semiconductor": 68.9,
+        "energy": 53.2,
+        "finance": 42.8,
+        "defense": 43.4,
+        "consumer": 35.9
+      },
+      "ranking_best_to_worst": [
+        "semiconductor",
+        "energy",
+        "defense",
+        "finance",
+        "consumer"
+      ]
+    }
+  ]
+}
