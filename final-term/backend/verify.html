@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>EconSim 백엔드 검증 (M0 hero 루프)</title>
+<!-- 백엔드 검증 전용. 디자인 X. 진짜 프론트(예쁜 터미널 UI)는 석원님 담당. -->
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  body{font-family:monospace;margin:16px;background:#111;color:#ddd}
+  #chart{border:1px solid #444;margin:8px 0}
+  button{font-family:monospace;font-size:14px;margin:4px;padding:8px 10px;
+         background:#222;color:#ddd;border:1px solid #555;cursor:pointer}
+  button:hover{background:#333}
+  .gauges span{display:inline-block;margin-right:14px}
+  #event{margin:8px 0}
+  .hint{color:#888;font-size:12px}
+  #log{white-space:pre-wrap;color:#7a7;font-size:12px;max-height:140px;overflow:auto;
+       border-top:1px solid #333;margin-top:8px;padding-top:6px}
+  .over{color:#e55;font-weight:bold}
+</style>
+</head>
+<body>
+<h2>EconSim 백엔드 검증 — 정책 → 차트 루프 (M0)</h2>
+<div class="gauges" id="gauges"></div>
+<div id="chart"></div>
+<div id="legend" class="hint"></div>
+<div id="event"></div>
+<button onclick="newGame()">🔄 새 게임</button>
+<div id="log"></div>
+
+<script>
+const ETFS = [
+  ["semiconductor", "#e74c3c"], ["energy", "#f39c12"], ["finance", "#3498db"],
+  ["defense", "#2ecc71"], ["consumer", "#9b59b6"],
+];
+const BASE = Math.floor(Date.UTC(2024, 0, 1) / 1000);
+const tTime = (turn) => BASE + turn * 86400;  // 턴 1개 = 하루
+let gameId = null, chart = null, series = {};
+
+function log(msg) {
+  const el = document.getElementById("log");
+  el.textContent = msg + "\n" + el.textContent;
+}
+
+function initChart() {
+  document.getElementById("chart").innerHTML = "";
+  chart = LightweightCharts.createChart(document.getElementById("chart"),
+    { width: 720, height: 360,
+      layout: { background: { color: "#111" }, textColor: "#ddd" },
+      grid: { vertLines: { color: "#222" }, horzLines: { color: "#222" } } });
+  series = {};
+  const legend = [];
+  for (const [k, c] of ETFS) {
+    series[k] = chart.addLineSeries({ color: c, lineWidth: 2 });
+    legend.push(`<span style="color:${c}">● ${k}</span>`);
+  }
+  document.getElementById("legend").innerHTML = legend.join("  ");
+}
+
+function plot(turn, etfPrices) {
+  for (const [k] of ETFS) series[k].update({ time: tTime(turn), value: etfPrices[k] });
+}
+
+function renderGauges(g) {
+  document.getElementById("gauges").innerHTML = Object.entries(g)
+    .map(([k, v]) => `<span>${k}: <b>${v}</b></span>`).join("");
+}
+
+function renderEvent(ev, turn) {
+  const div = document.getElementById("event");
+  if (!ev) { div.innerHTML = ""; return; }
+  div.innerHTML = `<b>[턴 ${turn}] ${ev.title}</b><br>${ev.desc}<br>` +
+    ev.choices.map((c, i) =>
+      `<button onclick="act(${i})">${c.label}</button>` +
+      `<span class="hint"> ${c.hint}</span>`).join("<br>");
+}
+
+async function newGame() {
+  const r = await fetch("/game/new", { method: "POST" });
+  const j = await r.json();
+  gameId = j.game_id;
+  initChart();
+  plot(j.turn, j.etf_prices);          // 턴1 초기값(전부 100) 점 1개
+  renderGauges(j.gauges);
+  renderEvent(j.event, j.turn);
+  log(`새 게임 ${gameId.slice(0,8)} — 이벤트: ${j.event.title}`);
+}
+
+async function act(idx) {
+  const r = await fetch("/game/action", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_id: gameId, choice_index: idx }),
+  });
+  const j = await r.json();
+  plot(j.turn, j.etf_prices);          // ★ 여기서 차트에 새 점이 찍힘 = hero
+  renderGauges(j.gauges);
+  const ch = Object.entries(j.etf_changes).map(([k, v]) => `${k} ${v}%`).join(", ");
+  log(`턴 ${j.turn}: ETF 변동 → ${ch}`);
+  if (j.game_over) {
+    document.getElementById("event").innerHTML =
+      `<div class="over">GAME OVER — ${j.game_over}</div>`;
+    log("게임 종료: " + j.game_over);
+  } else {
+    renderEvent(j.next_event, j.turn);
+  }
+}
+
+newGame();  // 페이지 열면 자동 시작
+</script>
+</body>
+</html>

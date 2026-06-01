@@ -1,11 +1,12 @@
 """EconSim FastAPI 백엔드."""
+import os
 import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from engine import new_game, apply_choice, check_game_over, select_event, generate_hint
 from events import EVENTS
@@ -41,6 +42,12 @@ def _format_event(event: dict) -> dict:
 class ActionRequest(BaseModel):
     game_id: str
     choice_index: int
+
+
+# 백엔드 검증용 최소 페이지 (디자인 X, 석원님 프론트와 별개). 같은 오리진이라 CORS 불필요.
+@app.get("/verify")
+def verify_page():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "verify.html"))
 
 
 @app.post("/game/new")
