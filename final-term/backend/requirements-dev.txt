@@ -1,0 +1,5 @@
+# 개발/테스트 전용 (서버 런타임 requirements.txt와 분리)
+# 설치: uv pip install -r requirements.txt -r requirements-dev.txt
+# 실행: python -m pytest tests/ -q
+pytest>=8.0
+# httpx는 TestClient에 필요하나 groq 의존성으로 이미 설치됨
