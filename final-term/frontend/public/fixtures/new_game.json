@@ -1,0 +1,22 @@
+{
+  "game_id": "mock-0001",
+  "turn": 1,
+  "gauges": { "debt": 50, "inflation": 40, "morale": 60, "tension": 30 },
+  "etf_prices": {
+    "semiconductor": 100,
+    "energy": 100,
+    "finance": 100,
+    "defense": 100,
+    "consumer": 100
+  },
+  "event": {
+    "id": "oil_crisis",
+    "title": "중동 군사 충돌로 유가 급등",
+    "desc": "중동 지역의 긴장이 고조되며 국제 유가가 배럴당 15% 급등했습니다. 에너지 수입 의존도가 높은 경제 구조에 즉각적 위협이 됩니다.",
+    "choices": [
+      { "label": "전략 비축유 방출", "hint": "부채↑ 소폭, 인플레이션↓ 대폭" },
+      { "label": "시장 개입 자제", "hint": "단기 충격 감수, 장기 안정 기대" },
+      { "label": "긴급 금리 인상", "hint": "인플레 억제, 민심↓ 우려" }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "turn": 2,
+  "gauges": { "debt": 55, "inflation": 32, "morale": 63, "tension": 28 },
+  "gauge_deltas": { "debt": 5, "inflation": -8, "morale": 3, "tension": -2 },
+  "etf_prices": {
+    "semiconductor": 99.2,
+    "energy": 107.5,
+    "finance": 98.8,
+    "defense": 102.1,
+    "consumer": 97.6
+  },
+  "etf_changes": {
+    "semiconductor": -0.8,
+    "energy": 7.5,
+    "finance": -1.2,
+    "defense": 2.1,
+    "consumer": -2.4
+  },
+  "next_event": {
+    "id": "tech_bubble",
+    "title": "반도체 공급 과잉 경고",
+    "desc": "글로벌 반도체 재고가 사상 최고치를 기록하며 관련 기업들의 주가가 일제히 급락했습니다. 수출 의존형 경제 구조에 직접적인 위협입니다.",
+    "choices": [
+      { "label": "반도체 R&D 보조금 지급", "hint": "부채↑, 장기 성장 기대" },
+      { "label": "생산 감축 유도", "hint": "단기 수익↓, 시장 안정화" },
+      { "label": "수출 다변화 추진", "hint": "민심↑, 인플레 소폭 상승" }
+    ]
+  },
+  "game_over": null
+}
