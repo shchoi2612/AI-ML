@@ -81,6 +81,23 @@ HINT_DIRECTION = {
     "tension": ("고조", "완화"),
 }
 
+# ── 코스트/자원 레이어 (v2 카드 시스템) ──
+# 매 턴 재정 여력(fiscal capacity): 부채가 높을수록 줄어든다 (현실 제약 직역).
+#   capacity = BASE_FISCAL_CAPACITY - max(0, debt - DEBT_CAPACITY_BASELINE)//DEBT_CAPACITY_DIVISOR
+#   (최소 MIN_FISCAL_CAPACITY로 클램프)
+#   예: debt 50→10, debt 80→7, debt 100→5
+BASE_FISCAL_CAPACITY = 10
+DEBT_CAPACITY_BASELINE = 50
+DEBT_CAPACITY_DIVISOR = 10
+MIN_FISCAL_CAPACITY = 2
+
+# 섹터 자원: 섹터 ETF가 100을 넘으면 매 턴 적립 → 그 섹터 카드 발동 재원.
+#   accrue = max(0, (etf_price - 100)//SECTOR_ACCRUAL_DIVISOR), 상한 SECTOR_RESOURCE_CAP
+# SECTOR_KEYS는 ETF_KEYS의 부분집합 (자원 게이팅 대상, 데모는 3섹터)
+SECTOR_KEYS = ("energy", "defense", "semiconductor")
+SECTOR_ACCRUAL_DIVISOR = 5
+SECTOR_RESOURCE_CAP = 20
+
 # ── LLM ──
 GROQ_MODEL = "llama-3.3-70b-versatile"
 NARRATION_MAX_TOKENS = 300
