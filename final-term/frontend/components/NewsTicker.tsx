@@ -153,20 +153,20 @@ export function NewsTicker({ gauges, turn }: NewsTickerProps) {
 
   const hasBad  = gauges.debt >= 60 || gauges.inflation >= 60 || gauges.morale <= 40 || gauges.tension >= 60;
   const hasGood = !hasBad && (gauges.debt <= 35 || gauges.inflation <= 35 || gauges.morale >= 65 || gauges.tension <= 35);
-  const labelColor = hasBad ? "#ff4444" : hasGood ? "#5599ff" : "#ffaa00";
-  const textColor  = hasBad ? "#ff9900" : hasGood ? "#88bbff" : "#39ff14";
+  const labelColor = hasBad ? "var(--crisis)" : hasGood ? "var(--stable)" : "var(--gold)";
+  const textColor  = hasBad ? "#ff9b80" : hasGood ? "#8fd6cb" : "var(--sr-mut)";
 
   return (
     <div className="shrink-0 flex items-center overflow-hidden font-mono select-none"
          style={{ fontSize: "0.6rem", height: "1.5em",
-                  background: "#010801",
-                  borderTop: "1px solid #1a4010", borderBottom: "1px solid #1a4010" }}>
+                  background: "var(--sr-bg2)",
+                  borderTop: "1px solid var(--sr-border)", borderBottom: "1px solid var(--sr-border)" }}>
 
       {/* 고정 라벨 */}
       <div className="shrink-0 font-bold px-2"
-           style={{ color: labelColor, borderRight: "1px solid #1a4010",
+           style={{ color: labelColor, borderRight: "1px solid var(--sr-border)",
                     whiteSpace: "nowrap", lineHeight: "1.5em" }}>
-        ◈ BREAKING NEWS
+        ◈ NEWS WIRE
       </div>
 
       {/* 스크롤 영역 */}
