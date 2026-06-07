@@ -78,7 +78,9 @@ def check_game_over(state: dict) -> str | None:
     if state["tension"] >= 100:
         return "전쟁 발발 — 국제 긴장이 폭발했습니다."
     if state["turn"] > MAX_TURNS:
-        return "WIN"
+        # 완주(승리): 리터럴 "WIN" 대신 표시용 한국어 메시지를 반환한다.
+        # game_over 계약은 string|null이며, 프론트는 이 문자열을 그대로 노출한다.
+        return f"임기 완주 — 당신의 {MAX_TURNS}개월이 끝났습니다."
     return None
 
 
