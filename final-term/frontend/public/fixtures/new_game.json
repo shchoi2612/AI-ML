@@ -1,22 +1,155 @@
 {
   "game_id": "mock-0001",
   "turn": 1,
-  "gauges": { "debt": 50, "inflation": 40, "morale": 60, "tension": 30 },
-  "etf_prices": {
-    "semiconductor": 100,
-    "energy": 100,
-    "finance": 100,
-    "defense": 100,
-    "consumer": 100
+  "gauges": {
+    "debt": 50,
+    "inflation": 40,
+    "morale": 60,
+    "tension": 30
   },
-  "event": {
-    "id": "oil_crisis",
-    "title": "중동 군사 충돌로 유가 급등",
-    "desc": "중동 지역의 긴장이 고조되며 국제 유가가 배럴당 15% 급등했습니다. 에너지 수입 의존도가 높은 경제 구조에 즉각적 위협이 됩니다.",
-    "choices": [
-      { "label": "전략 비축유 방출", "hint": "부채↑ 소폭, 인플레이션↓ 대폭" },
-      { "label": "시장 개입 자제", "hint": "단기 충격 감수, 장기 안정 기대" },
-      { "label": "긴급 금리 인상", "hint": "인플레 억제, 민심↓ 우려" }
-    ]
-  }
+  "etf_prices": {
+    "semiconductor": 100.0,
+    "energy": 100.0,
+    "finance": 100.0,
+    "defense": 100.0,
+    "consumer": 100.0
+  },
+  "situation": {
+    "id": "labor_strike",
+    "title": "노동자 총파업 임박",
+    "desc": "최저임금 동결에 반발해 주요 산업 노동자들이 총파업을 예고했습니다."
+  },
+  "fiscal_capacity": 10,
+  "sector_resources": {
+    "energy": 0,
+    "defense": 0,
+    "semiconductor": 0
+  },
+  "card_pool": [
+    {
+      "id": "interest_rate_hike",
+      "title": "기준금리 인상",
+      "sector": null,
+      "fiscal_cost": 2,
+      "sector_cost": 0,
+      "hint": "부채 소폭 감소 / 인플레이션 상당히 하락 / 민심 상당히 악화 예상",
+      "affordable": true,
+      "tags": [
+        "monetary"
+      ]
+    },
+    {
+      "id": "issue_bonds",
+      "title": "국채 발행 경기부양",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
+    },
+    {
+      "id": "welfare_expansion",
+      "title": "복지 예산 확대",
+      "sector": null,
+      "fiscal_cost": 4,
+      "sector_cost": 0,
+      "hint": "부채 상당히 증가 / 인플레이션 상당히 상승 / 민심 대폭 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal",
+        "social"
+      ]
+    },
+    {
+      "id": "austerity",
+      "title": "긴축 재정 패키지",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 감소 / 인플레이션 소폭 하락 / 민심 대폭 악화 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
+    },
+    {
+      "id": "strategic_oil_release",
+      "title": "전략 비축유 방출",
+      "sector": "energy",
+      "fiscal_cost": 3,
+      "sector_cost": 2,
+      "hint": "부채 상당히 증가 / 인플레이션 대폭 하락 / 민심 소폭 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
+    },
+    {
+      "id": "renewable_investment",
+      "title": "신재생 에너지 대규모 투자",
+      "sector": "energy",
+      "fiscal_cost": 4,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
+    },
+    {
+      "id": "defense_buildup",
+      "title": "군비 증강·방위비 확대",
+      "sector": "defense",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 악화 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "military"
+      ]
+    },
+    {
+      "id": "diplomatic_mediation",
+      "title": "다자간 외교 중재",
+      "sector": "defense",
+      "fiscal_cost": 2,
+      "sector_cost": 1,
+      "hint": "인플레이션 소폭 상승 / 민심 소폭 개선 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "diplomacy"
+      ]
+    },
+    {
+      "id": "chip_subsidy",
+      "title": "반도체 산업 긴급 보조금",
+      "sector": "semiconductor",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 고조 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    },
+    {
+      "id": "fab_construction",
+      "title": "반도체 팹 국비 건설",
+      "sector": "semiconductor",
+      "fiscal_cost": 6,
+      "sector_cost": 4,
+      "hint": "부채 극심한 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    }
+  ]
 }

@@ -1,7 +1,8 @@
+// 계약 v2 — 코스트 기반 카드 시스템
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// NEXT_PUBLIC_ 변수는 빌드 타임에 인라인됨. typeof window 체크 불필요.
+// NEXT_PUBLIC_ 변수는 빌드 타임에 인라인됨.
 const PREFER_MOCK = process.env.NEXT_PUBLIC_API_MODE === "mock";
 
 export type Gauges = {
@@ -19,13 +20,28 @@ export type EtfPrices = {
   consumer: number;
 };
 
-export type Choice = { label: string; hint: string };
+// 섹터 자원 게이팅 대상 (ETF의 부분집합)
+export type SectorResources = {
+  energy: number;
+  defense: number;
+  semiconductor: number;
+};
 
-export type GameEvent = {
+export type Situation = {
   id: string;
   title: string;
   desc: string;
-  choices: Choice[];
+};
+
+export type Card = {
+  id: string;
+  title: string;
+  sector: keyof SectorResources | null;
+  fiscal_cost: number;
+  sector_cost: number;
+  hint: string;
+  affordable: boolean;
+  tags: string[];
 };
 
 export type GameState = {
@@ -33,7 +49,10 @@ export type GameState = {
   turn: number;
   gauges: Gauges;
   etf_prices: EtfPrices;
-  event: GameEvent;
+  situation: Situation;
+  fiscal_capacity: number;
+  sector_resources: SectorResources;
+  card_pool: Card[];
 };
 
 export type ActionResponse = {
@@ -42,8 +61,12 @@ export type ActionResponse = {
   gauge_deltas: Gauges;
   etf_prices: EtfPrices;
   etf_changes: EtfPrices;
-  next_event: GameEvent;
+  next_situation: Situation | null;
   game_over: string | null;
+  // 진행 중일 때만 포함 (다음 턴 예산 + 카드풀)
+  fiscal_capacity?: number;
+  sector_resources?: SectorResources;
+  card_pool?: Card[];
 };
 
 async function loadFixture<T>(name: string): Promise<T> {
@@ -52,59 +75,32 @@ async function loadFixture<T>(name: string): Promise<T> {
   return res.json();
 }
 
-// 이미 나온 이벤트 추적 (같은 탭 세션 내)
-const _seenIds = new Set<string>();
-
-async function pickNextEvent(currentId?: string): Promise<GameEvent> {
-  const events = await loadFixture<GameEvent[]>("events");
-  const pool = events.filter((e) => e.id !== currentId && !_seenIds.has(e.id));
-  const candidates = pool.length > 0 ? pool : events.filter((e) => e.id !== currentId);
-  const picked = candidates[Math.floor(Math.random() * candidates.length)];
-  _seenIds.add(picked.id);
-  return picked;
-}
-
 // 백엔드 없어도 동작: mock 우선, 실패 시 fixture fallback
 export async function newGame(): Promise<GameState> {
-  if (PREFER_MOCK) {
-    _seenIds.clear();
-    const base = await loadFixture<GameState>("new_game");
-    const event = await pickNextEvent();
-    return { ...base, event };
-  }
+  if (PREFER_MOCK) return loadFixture<GameState>("new_game");
   try {
     const res = await fetch(`${BASE_URL}/game/new`, { method: "POST" });
     if (!res.ok) throw new Error(`${res.status}`);
     return res.json();
   } catch {
-    _seenIds.clear();
-    const base = await loadFixture<GameState>("new_game");
-    const event = await pickNextEvent();
-    return { ...base, event };
+    return loadFixture<GameState>("new_game");
   }
 }
 
 export async function sendAction(
   gameId: string,
-  choiceIndex: number,
-  currentEventId?: string
+  cardIds: string[],
 ): Promise<ActionResponse> {
-  if (PREFER_MOCK) {
-    const base = await loadFixture<ActionResponse>("action_response");
-    const next_event = await pickNextEvent(currentEventId);
-    return { ...base, next_event };
-  }
+  if (PREFER_MOCK) return loadFixture<ActionResponse>("action_response");
   try {
     const res = await fetch(`${BASE_URL}/game/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game_id: gameId, choice_index: choiceIndex }),
+      body: JSON.stringify({ game_id: gameId, card_ids: cardIds }),
     });
     if (!res.ok) throw new Error(`${res.status}`);
     return res.json();
   } catch {
-    const base = await loadFixture<ActionResponse>("action_response");
-    const next_event = await pickNextEvent(currentEventId);
-    return { ...base, next_event };
+    return loadFixture<ActionResponse>("action_response");
   }
 }

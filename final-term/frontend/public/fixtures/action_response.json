@@ -1,30 +1,168 @@
 {
   "turn": 2,
-  "gauges": { "debt": 55, "inflation": 32, "morale": 63, "tension": 28 },
-  "gauge_deltas": { "debt": 5, "inflation": -8, "morale": 3, "tension": -2 },
+  "gauges": {
+    "debt": 48,
+    "inflation": 32,
+    "morale": 51,
+    "tension": 32
+  },
+  "gauge_deltas": {
+    "debt": -2,
+    "inflation": -8,
+    "morale": -9,
+    "tension": 2
+  },
   "etf_prices": {
-    "semiconductor": 99.2,
-    "energy": 107.5,
-    "finance": 98.8,
-    "defense": 102.1,
-    "consumer": 97.6
+    "semiconductor": 98.6,
+    "energy": 96.5,
+    "finance": 102.5,
+    "defense": 102.5,
+    "consumer": 97.5
   },
   "etf_changes": {
-    "semiconductor": -0.8,
-    "energy": 7.5,
-    "finance": -1.2,
-    "defense": 2.1,
-    "consumer": -2.4
+    "semiconductor": -1.42,
+    "energy": -3.45,
+    "finance": 2.53,
+    "defense": 2.54,
+    "consumer": -2.54
   },
-  "next_event": {
-    "id": "tech_bubble",
-    "title": "반도체 공급 과잉 경고",
-    "desc": "글로벌 반도체 재고가 사상 최고치를 기록하며 관련 기업들의 주가가 일제히 급락했습니다. 수출 의존형 경제 구조에 직접적인 위협입니다.",
-    "choices": [
-      { "label": "반도체 R&D 보조금 지급", "hint": "부채↑, 장기 성장 기대" },
-      { "label": "생산 감축 유도", "hint": "단기 수익↓, 시장 안정화" },
-      { "label": "수출 다변화 추진", "hint": "민심↑, 인플레 소폭 상승" }
-    ]
+  "next_situation": {
+    "id": "capital_outflow",
+    "title": "외국 자본 대규모 이탈",
+    "desc": "신용등급 하향 우려로 외국인 투자자들이 대규모 매도에 나섰습니다."
   },
-  "game_over": null
+  "game_over": null,
+  "fiscal_capacity": 10,
+  "sector_resources": {
+    "energy": 0,
+    "defense": 0,
+    "semiconductor": 0
+  },
+  "card_pool": [
+    {
+      "id": "interest_rate_hike",
+      "title": "기준금리 인상",
+      "sector": null,
+      "fiscal_cost": 2,
+      "sector_cost": 0,
+      "hint": "부채 소폭 감소 / 인플레이션 상당히 하락 / 민심 상당히 악화 예상",
+      "affordable": true,
+      "tags": [
+        "monetary"
+      ]
+    },
+    {
+      "id": "issue_bonds",
+      "title": "국채 발행 경기부양",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
+    },
+    {
+      "id": "welfare_expansion",
+      "title": "복지 예산 확대",
+      "sector": null,
+      "fiscal_cost": 4,
+      "sector_cost": 0,
+      "hint": "부채 상당히 증가 / 인플레이션 상당히 상승 / 민심 대폭 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal",
+        "social"
+      ]
+    },
+    {
+      "id": "austerity",
+      "title": "긴축 재정 패키지",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 감소 / 인플레이션 소폭 하락 / 민심 대폭 악화 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
+    },
+    {
+      "id": "strategic_oil_release",
+      "title": "전략 비축유 방출",
+      "sector": "energy",
+      "fiscal_cost": 3,
+      "sector_cost": 2,
+      "hint": "부채 상당히 증가 / 인플레이션 대폭 하락 / 민심 소폭 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
+    },
+    {
+      "id": "renewable_investment",
+      "title": "신재생 에너지 대규모 투자",
+      "sector": "energy",
+      "fiscal_cost": 4,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
+    },
+    {
+      "id": "defense_buildup",
+      "title": "군비 증강·방위비 확대",
+      "sector": "defense",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 악화 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "military"
+      ]
+    },
+    {
+      "id": "diplomatic_mediation",
+      "title": "다자간 외교 중재",
+      "sector": "defense",
+      "fiscal_cost": 2,
+      "sector_cost": 1,
+      "hint": "인플레이션 소폭 상승 / 민심 소폭 개선 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "diplomacy"
+      ]
+    },
+    {
+      "id": "chip_subsidy",
+      "title": "반도체 산업 긴급 보조금",
+      "sector": "semiconductor",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 고조 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    },
+    {
+      "id": "fab_construction",
+      "title": "반도체 팹 국비 건설",
+      "sector": "semiconductor",
+      "fiscal_cost": 6,
+      "sector_cost": 4,
+      "hint": "부채 극심한 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    }
+  ]
 }

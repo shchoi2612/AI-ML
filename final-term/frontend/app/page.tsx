@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { GaugePanel } from "@/components/GaugePanel";
-import { PolicyInput } from "@/components/PolicyInput";
+import { CardPool } from "@/components/CardPool";
 import { CityScene } from "@/components/CityScene";
 import { DebugPanel } from "@/components/DebugPanel";
 import { NewsTicker } from "@/components/NewsTicker";
@@ -114,32 +114,31 @@ export default function GamePage() {
 
   useEffect(() => { startGame(); }, [startGame]);
 
-  const handleChoice = useCallback(
-    async (choiceIndex: number) => {
+  const handleCommit = useCallback(
+    async (cardIds: string[]) => {
       if (!gameState || loading) return;
       setLoading(true);
       setDeltas({});
       try {
-        const res = await sendAction(gameState.game_id, choiceIndex, gameState.event.id);
-        const nextTurn = gameState.turn + 1;
+        const res = await sendAction(gameState.game_id, cardIds);
         setDeltas(res.gauge_deltas);
         setGameState({
           ...gameState,
-          turn: nextTurn,
+          turn: res.turn,
           gauges: res.gauges,
           etf_prices: res.etf_prices,
-          event: res.next_event,
+          // 진행 중이면 백엔드가 다음 턴 상황/예산/카드풀을 함께 보냄
+          situation: res.next_situation ?? gameState.situation,
+          fiscal_capacity: res.fiscal_capacity ?? gameState.fiscal_capacity,
+          sector_resources: res.sector_resources ?? gameState.sector_resources,
+          card_pool: res.card_pool ?? gameState.card_pool,
         });
         setEtfHistory((prev) => [
           ...prev,
-          { turn: nextTurn, prices: res.etf_prices },
+          { turn: res.turn, prices: res.etf_prices },
         ]);
-        if (res.game_over) {
-          setGameOver(res.game_over);
-        } else if (nextTurn > MAX_TURNS) {
-          setGameOver("임기 완주! 경제를 성공적으로 이끌었습니다.");
-        }
-        setScreen("chart"); // 선택 후 → 차트 화면
+        if (res.game_over) setGameOver(res.game_over);
+        setScreen("chart"); // 집행 후 → 차트 화면
       } catch {
         setError("TRANSMISSION ERROR — action failed");
       } finally {
@@ -274,13 +273,16 @@ export default function GamePage() {
             </>
           )}
 
-          {/* ── 정책 선택 화면 ── */}
+          {/* ── 정책 선택 화면 (상시 카드풀 + 코스트 제한) ── */}
           {screen === "policy" && (
             <>
               <div className="flex-1 min-h-0 mt-1">
-                <PolicyInput
-                  event={gameState.event}
-                  onChoice={handleChoice}
+                <CardPool
+                  situation={gameState.situation}
+                  cards={gameState.card_pool}
+                  capacity={gameState.fiscal_capacity}
+                  resources={gameState.sector_resources}
+                  onCommit={handleCommit}
                   disabled={loading}
                 />
               </div>
