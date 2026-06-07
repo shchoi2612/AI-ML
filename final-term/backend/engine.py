@@ -4,6 +4,8 @@ from config import (
     INITIAL_STATE, GAUGE_KEYS, GAUGE_NAMES, MAX_TURNS,
     DIFFICULTY_TIERS, CASCADE_THRESHOLDS, ETF_KEYS,
     HINT_MAGNITUDE, HINT_DIRECTION,
+    BASE_FISCAL_CAPACITY, DEBT_CAPACITY_BASELINE, DEBT_CAPACITY_DIVISOR,
+    MIN_FISCAL_CAPACITY, SECTOR_KEYS, SECTOR_ACCRUAL_DIVISOR, SECTOR_RESOURCE_CAP,
 )
 from etf import calculate_etf_changes
 
@@ -19,7 +21,54 @@ def new_game() -> dict:
         "log": [],
         "event_history": [],
         "pending_chain": None,
+        # 코스트/자원 레이어 (v2)
+        "sector_resources": {s: 0 for s in SECTOR_KEYS},
+        "fiscal_capacity": compute_capacity(INITIAL_STATE),
     }
+
+
+# ── 코스트/자원 레이어 (v2) ────────────────────────────────────────────
+def compute_capacity(state: dict) -> int:
+    """현재 부채를 반영한 이번 턴의 재정 여력(use-it-or-lose-it)."""
+    penalty = max(0, state["debt"] - DEBT_CAPACITY_BASELINE) // DEBT_CAPACITY_DIVISOR
+    return max(MIN_FISCAL_CAPACITY, BASE_FISCAL_CAPACITY - penalty)
+
+
+def refresh_sector_resources(state: dict) -> dict:
+    """섹터 ETF 성과로 섹터 자원을 적립(누적)하고 상한으로 클램프한다."""
+    res = state["sector_resources"]
+    for s in SECTOR_KEYS:
+        accrue = max(0, int((state["etf_prices"].get(s, 100.0) - 100.0) // SECTOR_ACCRUAL_DIVISOR))
+        res[s] = min(SECTOR_RESOURCE_CAP, res[s] + accrue)
+    return res
+
+
+def card_affordable(card: dict, capacity: int, resources: dict) -> bool:
+    """단일 카드가 현재 여력/섹터자원으로 감당 가능한지."""
+    if card["fiscal_cost"] > capacity:
+        return False
+    sector = card.get("sector")
+    if sector is not None and card.get("sector_cost", 0) > resources.get(sector, 0):
+        return False
+    return True
+
+
+def validate_selection(state: dict, cards: list) -> str | None:
+    """선택한 카드 묶음의 총코스트가 예산 내인지 검증. 위반 시 사유 문자열, OK면 None."""
+    capacity = compute_capacity(state)
+    total_fiscal = sum(c["fiscal_cost"] for c in cards)
+    if total_fiscal > capacity:
+        return f"재정 여력 초과 (필요 {total_fiscal} > 여력 {capacity})"
+    sector_need: dict = {}
+    for c in cards:
+        s = c.get("sector")
+        if s is not None:
+            sector_need[s] = sector_need.get(s, 0) + c.get("sector_cost", 0)
+    for s, need in sector_need.items():
+        have = state["sector_resources"].get(s, 0)
+        if need > have:
+            return f"{s} 섹터 자원 초과 (필요 {need} > 보유 {have})"
+    return None
 
 
 def _get_difficulty_multiplier(turn: int) -> float:
@@ -30,41 +79,72 @@ def _get_difficulty_multiplier(turn: int) -> float:
     return 1.0
 
 
-def apply_choice(state: dict, choice: dict, label: str) -> dict:
-    """선택지의 효과를 랜덤 분산과 함께 적용하고, ETF를 갱신한다.
-
-    Returns:
-        실제 적용된 gauge_deltas dict
-    """
-    base = choice["base_effects"]
-    variance = choice.get("variance", 0)
-    mult = _get_difficulty_multiplier(state["turn"])
-    scaled_var = int(variance * mult)
-
-    gauge_deltas = {}
-    changes_text = []
-
+def _roll_deltas(base: dict, variance: int, turn: int) -> dict:
+    """base_effects + 난이도 스케일 랜덤 분산으로 gauge_deltas를 굴린다."""
+    scaled_var = int(variance * _get_difficulty_multiplier(turn))
+    deltas = {}
     for key in GAUGE_KEYS:
         base_val = base.get(key, 0)
         if base_val == 0 and scaled_var == 0:
             continue
-        delta = base_val + random.randint(-scaled_var, scaled_var)
+        deltas[key] = base_val + random.randint(-scaled_var, scaled_var)
+    return deltas
+
+
+def _commit(state: dict, gauge_deltas: dict, label: str) -> dict:
+    """gauge_deltas를 게이지에 적용 → ETF 갱신 → 히스토리 기록 → 턴 증가.
+
+    이 부분이 validity 파이프라인(gauge_deltas → calculate_etf_changes →
+    gauge_history/etf_history)이다. etf.py / 기록 방식은 불변.
+    """
+    changes_text = []
+    for key, delta in gauge_deltas.items():
         state[key] = max(0, min(100, state[key] + delta))
-        gauge_deltas[key] = delta
         sign = "+" if delta > 0 else ""
         changes_text.append(f"{GAUGE_NAMES[key]} {sign}{delta}")
 
-    # ETF 갱신
     new_prices, pct_changes = calculate_etf_changes(gauge_deltas, state["etf_prices"])
     state["etf_prices"] = new_prices
     state["etf_history"].append(pct_changes)
 
-    # 히스토리 기록
     state["gauge_history"].append({k: state[k] for k in GAUGE_KEYS})
-    state["log"].append(f"턴 {state['turn']}: [{label}] → {', '.join(changes_text)}")
+    state["log"].append(f"턴 {state['turn']}: [{label}] → {', '.join(changes_text) or '변화 없음'}")
     state["turn"] += 1
-
     return gauge_deltas
+
+
+def apply_choice(state: dict, choice: dict, label: str) -> dict:
+    """[v1 호환] 단일 선택지의 효과를 적용하고 gauge_deltas를 반환한다."""
+    deltas = _roll_deltas(choice["base_effects"], choice.get("variance", 0), state["turn"])
+    return _commit(state, deltas, label)
+
+
+def apply_cards(state: dict, cards: list) -> dict:
+    """[v2] 선택한 카드 묶음의 효과 합산을 적용하고, 섹터 자원을 차감한다.
+
+    재정 여력은 매 턴 새로 계산되는 예산이라 차감 대상이 아니다(use-it-or-lose-it).
+    섹터 자원은 누적되므로 사용분만큼 차감한다.
+    카드 0장(패스)도 허용: 게이지 변화 없이 시장 노이즈만 반영하며 턴이 진행된다.
+
+    Returns:
+        합산 적용된 gauge_deltas dict
+    """
+    combined: dict = {}
+    for c in cards:
+        d = _roll_deltas(c["base_effects"], c.get("variance", 0), state["turn"])
+        for k, v in d.items():
+            combined[k] = combined.get(k, 0) + v
+
+    label = " + ".join(c.get("title", c.get("label", "?")) for c in cards) or "정책 보류(패스)"
+    deltas = _commit(state, combined, label)
+
+    # 섹터 자원 차감 (누적 자원만)
+    for c in cards:
+        s = c.get("sector")
+        if s is not None and c.get("sector_cost", 0):
+            state["sector_resources"][s] = max(0, state["sector_resources"][s] - c["sector_cost"])
+
+    return deltas
 
 
 def check_game_over(state: dict) -> str | None:
