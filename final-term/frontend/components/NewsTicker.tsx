@@ -158,19 +158,19 @@ export function NewsTicker({ gauges, turn }: NewsTickerProps) {
 
   return (
     <div className="shrink-0 flex items-center overflow-hidden font-mono select-none"
-         style={{ fontSize: "0.6rem", height: "1.5em",
+         style={{ fontSize: "0.84rem", height: "2.5em",
                   background: "var(--sr-bg2)",
                   borderTop: "1px solid var(--sr-border)", borderBottom: "1px solid var(--sr-border)" }}>
 
       {/* 고정 라벨 */}
       <div className="shrink-0 font-bold px-2"
            style={{ color: labelColor, borderRight: "1px solid var(--sr-border)",
-                    whiteSpace: "nowrap", lineHeight: "1.5em" }}>
+                    whiteSpace: "nowrap", lineHeight: "2.5em" }}>
         ◈ NEWS WIRE
       </div>
 
       {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-hidden" style={{ height: "1.5em" }}>
+      <div className="flex-1 overflow-hidden" style={{ height: "2.5em" }}>
         <div
           key={state.animKey}
           onAnimationEnd={onEnd}
@@ -180,7 +180,7 @@ export function NewsTicker({ gauges, turn }: NewsTickerProps) {
             color: textColor,
             paddingLeft: "100%",
             animation: `ticker-scroll ${state.duration}s linear forwards`,
-            lineHeight: "1.5em",
+            lineHeight: "2.5em",
           }}
         >
           {state.text}

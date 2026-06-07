@@ -82,12 +82,12 @@ export function CardPool({ situation, cards, capacity, resources, onCommit, disa
       <div className="sr-panel shrink-0 px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-1">
         <span className="flex items-center gap-2">
           <span className="sr-label" style={{ color: remFiscal < 0 ? "var(--crisis)" : "var(--gold)" }}>재정 여력</span>
-          <Pips filled={Math.max(0, remFiscal)} total={capacity} color="var(--gold)" size={9} />
+          <Pips filled={Math.max(0, remFiscal)} total={capacity} color="var(--gold)" size={6} />
         </span>
         {(["energy", "defense", "semiconductor"] as const).map((s) => (
           <span key={s} className="flex items-center gap-2">
             <span className="sr-label">{SECTOR_META[s].label}</span>
-            <Pips filled={Math.max(0, remSector(s))} total={Math.max(resources[s], 1)} color={SECTOR_META[s].color} />
+            <Pips filled={Math.max(0, remSector(s))} total={Math.max(resources[s], 1)} color={SECTOR_META[s].color} size={6} />
           </span>
         ))}
         <span className="ml-auto sr-label" style={{ color: "var(--sr-mut)" }}>선택 {selected.length}</span>
@@ -138,12 +138,12 @@ export function CardPool({ situation, cards, capacity, resources, onCommit, disa
               <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
                 <span className="flex items-center gap-1">
                   <span style={{ fontSize: "0.52rem", color: "var(--sr-dim)" }}>재정</span>
-                  <Pips filled={c.fiscal_cost} total={c.fiscal_cost} color="var(--gold)" size={6} />
+                  <Pips filled={c.fiscal_cost} total={c.fiscal_cost} color="var(--gold)" size={5} />
                 </span>
                 {sm && c.sector_cost > 0 && (
                   <span className="flex items-center gap-1">
                     <span style={{ fontSize: "0.52rem", color: "var(--sr-dim)" }}>{sm.label}</span>
-                    <Pips filled={c.sector_cost} total={c.sector_cost} color={sm.color} size={6} />
+                    <Pips filled={c.sector_cost} total={c.sector_cost} color={sm.color} size={5} />
                   </span>
                 )}
               </div>

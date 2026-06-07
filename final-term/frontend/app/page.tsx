@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { StatusBars } from "@/components/StatusBars";
 import { MarketSignal } from "@/components/MarketSignal";
+import { NationalFace } from "@/components/NationalFace";
 import { BreakingNews } from "@/components/BreakingNews";
 import { CardPool } from "@/components/CardPool";
 import { Scorecard } from "@/components/Scorecard";
@@ -12,6 +13,7 @@ import {
   type GameState,
   type EtfPrices,
 } from "@/lib/api";
+import { moodFromGauges } from "@/lib/expression";
 
 type EtfPoint = { turn: number; prices: EtfPrices };
 
@@ -134,10 +136,15 @@ export default function GamePage() {
           {/* 속보 자막 */}
           <BreakingNews gameId={gameState.game_id} turn={narrationTurn} />
 
-          {/* 지표 + 시장 신호 (컴팩트) */}
-          <div className="shrink-0 flex gap-2">
+          {/* 좌: 국가 지표 / 우: 국가 표정(작게) + 시장 신호 상태 */}
+          <div className="shrink-0 flex gap-2 items-stretch">
             <div className="flex-1 min-w-0"><StatusBars gauges={gameState.gauges} /></div>
-            <div className="w-[40%] min-w-0 flex"><div className="w-full self-stretch"><MarketSignal history={etfHistory} /></div></div>
+            <div className="w-[34%] min-w-0 flex flex-col gap-2">
+              <div className="sr-panel flex-1 flex items-center justify-center py-2 min-h-0">
+                <NationalFace mood={moodFromGauges(gameState.gauges)} />
+              </div>
+              <MarketSignal history={etfHistory} />
+            </div>
           </div>
 
           {/* 카드 주인공 */}
