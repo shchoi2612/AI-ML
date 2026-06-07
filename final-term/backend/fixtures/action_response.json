@@ -1,49 +1,168 @@
 {
-    "turn": 2,
-    "gauges": {
-        "debt": 58,
-        "inflation": 38,
-        "morale": 63,
-        "tension": 30
+  "turn": 2,
+  "gauges": {
+    "debt": 48,
+    "inflation": 32,
+    "morale": 51,
+    "tension": 32
+  },
+  "gauge_deltas": {
+    "debt": -2,
+    "inflation": -8,
+    "morale": -9,
+    "tension": 2
+  },
+  "etf_prices": {
+    "semiconductor": 98.6,
+    "energy": 96.5,
+    "finance": 102.5,
+    "defense": 102.5,
+    "consumer": 97.5
+  },
+  "etf_changes": {
+    "semiconductor": -1.42,
+    "energy": -3.45,
+    "finance": 2.53,
+    "defense": 2.54,
+    "consumer": -2.54
+  },
+  "next_situation": {
+    "id": "capital_outflow",
+    "title": "외국 자본 대규모 이탈",
+    "desc": "신용등급 하향 우려로 외국인 투자자들이 대규모 매도에 나섰습니다."
+  },
+  "game_over": null,
+  "fiscal_capacity": 10,
+  "sector_resources": {
+    "energy": 0,
+    "defense": 0,
+    "semiconductor": 0
+  },
+  "card_pool": [
+    {
+      "id": "interest_rate_hike",
+      "title": "기준금리 인상",
+      "sector": null,
+      "fiscal_cost": 2,
+      "sector_cost": 0,
+      "hint": "부채 소폭 감소 / 인플레이션 상당히 하락 / 민심 상당히 악화 예상",
+      "affordable": true,
+      "tags": [
+        "monetary"
+      ]
     },
-    "gauge_deltas": {
-        "debt": 8,
-        "inflation": -2,
-        "morale": 3,
-        "tension": 0
+    {
+      "id": "issue_bonds",
+      "title": "국채 발행 경기부양",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
     },
-    "etf_prices": {
-        "semiconductor": 99.4,
-        "energy": 96.9,
-        "finance": 95.2,
-        "defense": 99.5,
-        "consumer": 102.0
+    {
+      "id": "welfare_expansion",
+      "title": "복지 예산 확대",
+      "sector": null,
+      "fiscal_cost": 4,
+      "sector_cost": 0,
+      "hint": "부채 상당히 증가 / 인플레이션 상당히 상승 / 민심 대폭 개선 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal",
+        "social"
+      ]
     },
-    "etf_changes": {
-        "semiconductor": -0.63,
-        "energy": -3.08,
-        "finance": -4.8,
-        "defense": -0.5,
-        "consumer": 2.01
+    {
+      "id": "austerity",
+      "title": "긴축 재정 패키지",
+      "sector": null,
+      "fiscal_cost": 1,
+      "sector_cost": 0,
+      "hint": "부채 대폭 감소 / 인플레이션 소폭 하락 / 민심 대폭 악화 예상",
+      "affordable": true,
+      "tags": [
+        "fiscal"
+      ]
     },
-    "next_event": {
-        "id": "capital_outflow",
-        "title": "\uc678\uad6d \uc790\ubcf8 \ub300\uaddc\ubaa8 \uc774\ud0c8",
-        "desc": "\uc2e0\uc6a9\ub4f1\uae09 \ud558\ud5a5 \uc6b0\ub824\ub85c \uc678\uad6d\uc778 \ud22c\uc790\uc790\ub4e4\uc774 \ub300\uaddc\ubaa8 \ub9e4\ub3c4\uc5d0 \ub098\uc130\uc2b5\ub2c8\ub2e4.",
-        "choices": [
-            {
-                "label": "\uc790\ubcf8 \uc720\ucd9c \uaddc\uc81c \uac15\ud654",
-                "hint": "\uc778\ud50c\ub808\uc774\uc158 \uc0c1\ub2f9\ud788 \uc0c1\uc2b9 / \ubbfc\uc2ec \uc0c1\ub2f9\ud788 \uc545\ud654 / \uad6d\uc81c\uae34\uc7a5\ub3c4 \ub300\ud3ed \uace0\uc870 \uc608\uc0c1"
-            },
-            {
-                "label": "\uae30\uc900\uae08\ub9ac \uae34\uae09 \uc778\uc0c1",
-                "hint": "\ubd80\ucc44 \uc0c1\ub2f9\ud788 \uac10\uc18c / \uc778\ud50c\ub808\uc774\uc158 \uc0c1\ub2f9\ud788 \ud558\ub77d / \ubbfc\uc2ec \ub300\ud3ed \uc545\ud654 \uc608\uc0c1"
-            },
-            {
-                "label": "\uc678\ud658\ubcf4\uc720\uace0 \ud22c\uc785 \ubc29\uc5b4",
-                "hint": "\ubd80\ucc44 \ub300\ud3ed \uc99d\uac00 / \uc778\ud50c\ub808\uc774\uc158 \uc0c1\ub2f9\ud788 \ud558\ub77d / \ubbfc\uc2ec \uc18c\ud3ed \uac1c\uc120 / \uad6d\uc81c\uae34\uc7a5\ub3c4 \uc18c\ud3ed \uc644\ud654 \uc608\uc0c1"
-            }
-        ]
+    {
+      "id": "strategic_oil_release",
+      "title": "전략 비축유 방출",
+      "sector": "energy",
+      "fiscal_cost": 3,
+      "sector_cost": 2,
+      "hint": "부채 상당히 증가 / 인플레이션 대폭 하락 / 민심 소폭 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
     },
-    "game_over": null
+    {
+      "id": "renewable_investment",
+      "title": "신재생 에너지 대규모 투자",
+      "sector": "energy",
+      "fiscal_cost": 4,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "energy"
+      ]
+    },
+    {
+      "id": "defense_buildup",
+      "title": "군비 증강·방위비 확대",
+      "sector": "defense",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 상승 / 민심 상당히 악화 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "military"
+      ]
+    },
+    {
+      "id": "diplomatic_mediation",
+      "title": "다자간 외교 중재",
+      "sector": "defense",
+      "fiscal_cost": 2,
+      "sector_cost": 1,
+      "hint": "인플레이션 소폭 상승 / 민심 소폭 개선 / 국제긴장도 대폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "defense",
+        "diplomacy"
+      ]
+    },
+    {
+      "id": "chip_subsidy",
+      "title": "반도체 산업 긴급 보조금",
+      "sector": "semiconductor",
+      "fiscal_cost": 5,
+      "sector_cost": 3,
+      "hint": "부채 대폭 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 고조 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    },
+    {
+      "id": "fab_construction",
+      "title": "반도체 팹 국비 건설",
+      "sector": "semiconductor",
+      "fiscal_cost": 6,
+      "sector_cost": 4,
+      "hint": "부채 극심한 증가 / 인플레이션 소폭 하락 / 민심 상당히 개선 / 국제긴장도 소폭 완화 예상",
+      "affordable": false,
+      "tags": [
+        "semiconductor",
+        "tech"
+      ]
+    }
+  ]
 }
