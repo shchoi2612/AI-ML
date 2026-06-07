@@ -85,11 +85,11 @@ HINT_DIRECTION = {
 # 매 턴 재정 여력(fiscal capacity): 부채가 높을수록 줄어든다 (현실 제약 직역).
 #   capacity = BASE_FISCAL_CAPACITY - max(0, debt - DEBT_CAPACITY_BASELINE)//DEBT_CAPACITY_DIVISOR
 #   (최소 MIN_FISCAL_CAPACITY로 클램프)
-#   예: debt 50→10, debt 80→7, debt 100→5
-BASE_FISCAL_CAPACITY = 10
+#   예: debt 50→4, debt 70→2, debt 90→1  (빠듯하게: 매 턴 1~2장만)
+BASE_FISCAL_CAPACITY = 4
 DEBT_CAPACITY_BASELINE = 50
 DEBT_CAPACITY_DIVISOR = 10
-MIN_FISCAL_CAPACITY = 2
+MIN_FISCAL_CAPACITY = 1
 
 # 섹터 자원: 섹터 ETF가 100을 넘으면 매 턴 적립 → 그 섹터 카드 발동 재원.
 #   accrue = max(0, (etf_price - 100)//SECTOR_ACCRUAL_DIVISOR), 상한 SECTOR_RESOURCE_CAP
@@ -97,6 +97,10 @@ MIN_FISCAL_CAPACITY = 2
 SECTOR_KEYS = ("energy", "defense", "semiconductor")
 SECTOR_ACCRUAL_DIVISOR = 5
 SECTOR_RESOURCE_CAP = 20
+
+# 패시브 드리프트: 매 턴 자동으로 악화 (무위=손해). 빠듯한 예산이 의미를 갖게 한다.
+# 가만히 있으면 부채·인플레·긴장↑, 민심↓ → 정책으로 상쇄해야 생존.
+PASSIVE_DRIFT = {"debt": 3, "inflation": 2, "morale": -2, "tension": 2}
 
 # ── LLM ──
 GROQ_MODEL = "llama-3.3-70b-versatile"

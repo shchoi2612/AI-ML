@@ -6,6 +6,7 @@ from config import (
     HINT_MAGNITUDE, HINT_DIRECTION,
     BASE_FISCAL_CAPACITY, DEBT_CAPACITY_BASELINE, DEBT_CAPACITY_DIVISOR,
     MIN_FISCAL_CAPACITY, SECTOR_KEYS, SECTOR_ACCRUAL_DIVISOR, SECTOR_RESOURCE_CAP,
+    PASSIVE_DRIFT,
 )
 from etf import calculate_etf_changes
 
@@ -129,7 +130,8 @@ def apply_cards(state: dict, cards: list) -> dict:
     Returns:
         합산 적용된 gauge_deltas dict
     """
-    combined: dict = {}
+    # 패시브 드리프트부터 깔고(무위=손해), 그 위에 카드 효과를 합산한다.
+    combined: dict = dict(PASSIVE_DRIFT)
     for c in cards:
         d = _roll_deltas(c["base_effects"], c.get("variance", 0), state["turn"])
         for k, v in d.items():

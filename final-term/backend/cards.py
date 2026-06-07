@@ -23,19 +23,19 @@ CARDS = [
     # ── 일반 카드 (sector=None, 섹터 자원 불필요) ──
     {
         "id": "interest_rate_hike", "title": "기준금리 인상",
-        "sector": None, "fiscal_cost": 2, "sector_cost": 0,
+        "sector": None, "fiscal_cost": 1, "sector_cost": 0,
         "base_effects": {"debt": -3, "inflation": -6, "morale": -7}, "variance": 2,
         "tags": ["monetary"],
     },
     {
         "id": "issue_bonds", "title": "국채 발행 경기부양",
-        "sector": None, "fiscal_cost": 1, "sector_cost": 0,
+        "sector": None, "fiscal_cost": 0, "sector_cost": 0,
         "base_effects": {"debt": 10, "inflation": 3, "morale": 5}, "variance": 3,
         "tags": ["fiscal"],
     },
     {
         "id": "welfare_expansion", "title": "복지 예산 확대",
-        "sector": None, "fiscal_cost": 4, "sector_cost": 0,
+        "sector": None, "fiscal_cost": 2, "sector_cost": 0,
         "base_effects": {"debt": 6, "inflation": 4, "morale": 10}, "variance": 2,
         "tags": ["fiscal", "social"],
     },
@@ -49,13 +49,13 @@ CARDS = [
     # ── 에너지 섹터 카드 ──
     {
         "id": "strategic_oil_release", "title": "전략 비축유 방출",
-        "sector": "energy", "fiscal_cost": 3, "sector_cost": 2,
+        "sector": "energy", "fiscal_cost": 2, "sector_cost": 1,
         "base_effects": {"debt": 5, "inflation": -8, "morale": 3, "tension": -2}, "variance": 2,
         "tags": ["energy"],
     },
     {
         "id": "renewable_investment", "title": "신재생 에너지 대규모 투자",
-        "sector": "energy", "fiscal_cost": 4, "sector_cost": 3,
+        "sector": "energy", "fiscal_cost": 3, "sector_cost": 2,
         "base_effects": {"debt": 8, "inflation": -2, "morale": 6, "tension": -3}, "variance": 2,
         "tags": ["energy"],
     },
@@ -63,7 +63,7 @@ CARDS = [
     # ── 방위 섹터 카드 ──
     {
         "id": "defense_buildup", "title": "군비 증강·방위비 확대",
-        "sector": "defense", "fiscal_cost": 5, "sector_cost": 3,
+        "sector": "defense", "fiscal_cost": 3, "sector_cost": 2,
         "base_effects": {"debt": 12, "inflation": 3, "morale": -5, "tension": -8}, "variance": 3,
         "tags": ["defense", "military"],
     },
@@ -77,13 +77,13 @@ CARDS = [
     # ── 반도체 섹터 카드 ──
     {
         "id": "chip_subsidy", "title": "반도체 산업 긴급 보조금",
-        "sector": "semiconductor", "fiscal_cost": 5, "sector_cost": 3,
+        "sector": "semiconductor", "fiscal_cost": 3, "sector_cost": 2,
         "base_effects": {"debt": 10, "inflation": -3, "morale": 5, "tension": 3}, "variance": 2,
         "tags": ["semiconductor", "tech"],
     },
     {
         "id": "fab_construction", "title": "반도체 팹 국비 건설",
-        "sector": "semiconductor", "fiscal_cost": 6, "sector_cost": 4,
+        "sector": "semiconductor", "fiscal_cost": 4, "sector_cost": 3,
         "base_effects": {"debt": 15, "inflation": -2, "morale": 6, "tension": -3}, "variance": 3,
         "tags": ["semiconductor", "tech"],
     },
