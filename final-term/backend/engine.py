@@ -92,11 +92,16 @@ def _roll_deltas(base: dict, variance: int, turn: int) -> dict:
     return deltas
 
 
-def _commit(state: dict, gauge_deltas: dict, label: str) -> dict:
+def _commit(state: dict, gauge_deltas: dict, label: str, etf_deltas: dict | None = None) -> dict:
     """gauge_deltas를 게이지에 적용 → ETF 갱신 → 히스토리 기록 → 턴 증가.
 
-    이 부분이 validity 파이프라인(gauge_deltas → calculate_etf_changes →
+    이 부분이 validity 파이프라인(deltas → calculate_etf_changes →
     gauge_history/etf_history)이다. etf.py / 기록 방식은 불변.
+
+    etf_deltas가 주어지면 ETF는 그 값으로만 갱신한다(게이지는 gauge_deltas).
+    패시브 드리프트를 게이지엔 반영하되 ETF 신호엔 섞지 않기 위한 분리:
+    ETF는 '플레이어 정책'에만 반응해야 EMH ρ(정책→섹터) 측정이 깨끗하다.
+    None이면 gauge_deltas로 ETF를 갱신한다(v1 호환).
     """
     changes_text = []
     for key, delta in gauge_deltas.items():
@@ -104,7 +109,8 @@ def _commit(state: dict, gauge_deltas: dict, label: str) -> dict:
         sign = "+" if delta > 0 else ""
         changes_text.append(f"{GAUGE_NAMES[key]} {sign}{delta}")
 
-    new_prices, pct_changes = calculate_etf_changes(gauge_deltas, state["etf_prices"])
+    etf_input = gauge_deltas if etf_deltas is None else etf_deltas
+    new_prices, pct_changes = calculate_etf_changes(etf_input, state["etf_prices"])
     state["etf_prices"] = new_prices
     state["etf_history"].append(pct_changes)
 
@@ -131,14 +137,19 @@ def apply_cards(state: dict, cards: list) -> dict:
         합산 적용된 gauge_deltas dict
     """
     # 패시브 드리프트부터 깔고(무위=손해), 그 위에 카드 효과를 합산한다.
+    # 단, 드리프트는 게이지에만 반영하고 ETF 신호엔 섞지 않는다(EMH ρ 보호):
+    #   combined(드리프트+정책) → 게이지/gauge_history
+    #   policy(정책만)          → ETF/etf_history
     combined: dict = dict(PASSIVE_DRIFT)
+    policy: dict = {}
     for c in cards:
         d = _roll_deltas(c["base_effects"], c.get("variance", 0), state["turn"])
         for k, v in d.items():
             combined[k] = combined.get(k, 0) + v
+            policy[k] = policy.get(k, 0) + v
 
     label = " + ".join(c.get("title", c.get("label", "?")) for c in cards) or "정책 보류(패스)"
-    deltas = _commit(state, combined, label)
+    deltas = _commit(state, combined, label, etf_deltas=policy)
 
     # 섹터 자원 차감 (누적 자원만)
     for c in cards:
