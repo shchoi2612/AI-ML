@@ -27,18 +27,25 @@ export type SectorResources = {
   semiconductor: number;
 };
 
+export type Severity = "light" | "medium" | "major";
+
 export type Situation = {
   id: string;
   title: string;
   desc: string;
+  severity?: Severity;
+  severity_label?: string;
 };
 
 export type Card = {
   id: string;
   title: string;
   sector: keyof SectorResources | null;
-  fiscal_cost: number;
+  fiscal_cost: number;       // 이번 턴 실제 코스트(위기 대응 할인 반영)
   sector_cost: number;
+  base_fiscal_cost?: number; // 원래 코스트(할인 취소선 표시용)
+  base_sector_cost?: number;
+  discounted?: boolean;      // 이번 턴 위기 대응으로 할인됨
   hint: string;
   affordable: boolean;
   tags: string[];

@@ -7,11 +7,13 @@ import { BreakingNews } from "@/components/BreakingNews";
 import { CardPool } from "@/components/CardPool";
 import { Scorecard } from "@/components/Scorecard";
 import { NewsTicker } from "@/components/NewsTicker";
+import { CrisisAlert } from "@/components/CrisisAlert";
 import {
   newGame,
   sendAction,
   type GameState,
   type EtfPrices,
+  type Situation,
 } from "@/lib/api";
 import { moodFromGauges } from "@/lib/expression";
 
@@ -30,6 +32,16 @@ export default function GamePage() {
   const [fx, setFx] = useState(0);          // 결정 반응 트리거
   const [crisisFx, setCrisisFx] = useState(false);
   const [shaking, setShaking] = useState(false);
+  const [crisisAlert, setCrisisAlert] = useState<Situation | null>(null);  // 중대 위기 풀스크린
+
+  // 큰 위기(major)면 풀스크린 속보 + 화면 흔들림
+  const flagMajor = useCallback((s?: Situation | null) => {
+    if (s?.severity === "major") {
+      setCrisisAlert(s);
+      setShaking(true);
+      setTimeout(() => setShaking(false), 340);
+    }
+  }, []);
 
   const startGame = useCallback(async () => {
     setLoading(true);
@@ -41,12 +53,14 @@ export default function GamePage() {
       const state = await newGame();
       setGameState(state);
       setEtfHistory([{ turn: state.turn, prices: state.etf_prices }]);
+      setCrisisAlert(null);
+      flagMajor(state.situation);   // 1턴부터 중대 위기일 수 있음
     } catch {
       setError("연결 실패 — 백엔드(:8000) 확인 또는 NEXT_PUBLIC_API_MODE=mock");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [flagMajor]);
 
   useEffect(() => { startGame(); }, [startGame]);
 
@@ -79,13 +93,14 @@ export default function GamePage() {
         setTimeout(() => setShaking(false), 340);
 
         if (res.game_over) setGameOver(res.game_over);
+        else flagMajor(res.next_situation);   // 다음 턴이 중대 위기면 풀스크린 속보
       } catch {
         setError("전송 오류 — 정책 집행 실패");
       } finally {
         setLoading(false);
       }
     },
-    [gameState, loading]
+    [gameState, loading, flagMajor]
   );
 
   const month = gameState ? `2024.${String(((gameState.turn - 1) % 12) + 1).padStart(2, "0")}` : "----.--";
@@ -168,6 +183,11 @@ export default function GamePage() {
 
       {/* 하단 앰비언트 속보 스크롤 */}
       {gameState && <NewsTicker gauges={gameState.gauges} turn={gameState.turn} />}
+
+      {/* 중대 위기 풀스크린 속보 (게임오버 아닐 때만) */}
+      {crisisAlert && !gameOver && (
+        <CrisisAlert situation={crisisAlert} onDismiss={() => setCrisisAlert(null)} />
+      )}
     </div>
   );
 }

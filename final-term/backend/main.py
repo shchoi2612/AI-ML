@@ -11,8 +11,9 @@ from pydantic import BaseModel
 from engine import (
     new_game, check_game_over, select_event, generate_hint,
     apply_cards, compute_capacity, refresh_sector_resources,
-    card_affordable, validate_selection,
+    card_affordable, validate_selection, effective_cost,
 )
+from config import SEVERITY_LABELS
 from cards import CARDS, CARDS_BY_ID
 from events import EVENTS
 from narration import stream_narration
@@ -39,32 +40,45 @@ def _gauges(state: dict) -> dict:
 
 def _format_situation(event: dict) -> dict:
     """이벤트를 '상황(situation)' 서사로 변환 (v2: 선택지는 카드풀이 대체)."""
-    return {"id": event["id"], "title": event["title"], "desc": event["desc"]}
+    sev = event.get("severity", "light")
+    return {
+        "id": event["id"],
+        "title": event["title"],
+        "desc": event["desc"],
+        "severity": sev,                              # light / medium / major
+        "severity_label": SEVERITY_LABELS.get(sev, "사건"),
+    }
 
 
-def _format_card(card: dict, capacity: int, resources: dict) -> dict:
-    """카드를 프론트용 JSON으로 (코스트 + 감당가능 플래그 + 정성 힌트)."""
+def _format_card(card: dict, capacity: int, resources: dict, state: dict) -> dict:
+    """카드를 프론트용 JSON으로 (할인 반영 코스트 + 감당가능 + 정성 힌트 + 대응 할인 표시)."""
+    eff_fiscal, eff_sector = effective_cost(card, state)
+    base_fiscal = card["fiscal_cost"]
+    base_sector = card.get("sector_cost", 0)
     return {
         "id": card["id"],
         "title": card["title"],
         "sector": card.get("sector"),
-        "fiscal_cost": card["fiscal_cost"],
-        "sector_cost": card.get("sector_cost", 0),
+        "fiscal_cost": eff_fiscal,                    # 이번 턴 실제 코스트(할인 반영)
+        "sector_cost": eff_sector,
+        "base_fiscal_cost": base_fiscal,              # 원래 코스트(취소선 표시용)
+        "base_sector_cost": base_sector,
+        "discounted": (eff_fiscal < base_fiscal) or (eff_sector < base_sector),
         "hint": generate_hint(card["base_effects"]),
-        "affordable": card_affordable(card, capacity, resources),
+        "affordable": card_affordable(card, capacity, resources, state),
         "tags": card.get("tags", []),
     }
 
 
 def _budget_payload(state: dict) -> dict:
-    """이번 턴의 예산(재정 여력 + 섹터 자원) + 감당가능 플래그 붙은 카드풀."""
+    """이번 턴의 예산(재정 여력 + 섹터 자원) + 감당가능/할인 반영 카드풀."""
     capacity = compute_capacity(state)
     state["fiscal_capacity"] = capacity
     resources = state["sector_resources"]
     return {
         "fiscal_capacity": capacity,
         "sector_resources": dict(resources),
-        "card_pool": [_format_card(c, capacity, resources) for c in CARDS],
+        "card_pool": [_format_card(c, capacity, resources, state) for c in CARDS],
     }
 
 

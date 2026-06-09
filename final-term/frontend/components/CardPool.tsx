@@ -67,16 +67,28 @@ export function CardPool({ situation, cards, capacity, resources, onCommit, disa
   return (
     <div className="flex flex-col gap-2 h-full min-h-0">
 
-      {/* ── 상황 배너 (크게) ── */}
-      <div className="sr-panel shrink-0 px-4 py-3" style={{ borderLeft: "3px solid var(--crisis)" }}>
-        <div className="sr-label" style={{ color: "var(--crisis)" }}>긴급 현안 · SITUATION</div>
-        <div className="sr-display" style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--sr-ink)", lineHeight: 1.25, marginTop: 3 }}>
-          {situation.title}
-        </div>
-        <div style={{ fontSize: "0.66rem", color: "var(--sr-mut)", lineHeight: 1.6, marginTop: 5 }}>
-          {situation.desc}
-        </div>
-      </div>
+      {/* ── 상황 배너 (강도별 색/라벨) ── */}
+      {(() => {
+        const sev = situation.severity ?? "light";
+        const sc = sev === "major" ? "var(--crisis)" : sev === "medium" ? "var(--gold)" : "var(--sr-dim)";
+        const label = situation.severity_label ?? "사건";
+        return (
+          <div className="sr-panel shrink-0 px-4 py-3" style={{ borderLeft: `3px solid ${sc}` }}>
+            <div className="flex items-center gap-2">
+              <span className="sr-label" style={{ color: sc, fontWeight: 800, letterSpacing: "0.1em" }}>
+                {sev === "major" ? "■ 중대 위기" : sev === "medium" ? "▲ 위기" : "· 사건"}
+              </span>
+              <span className="sr-label" style={{ color: "var(--sr-dim)" }}>SITUATION · {label}</span>
+            </div>
+            <div className="sr-display" style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--sr-ink)", lineHeight: 1.25, marginTop: 3 }}>
+              {situation.title}
+            </div>
+            <div style={{ fontSize: "0.66rem", color: "var(--sr-mut)", lineHeight: 1.6, marginTop: 5 }}>
+              {situation.desc}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 예산 바 (핍, 숫자 없음) ── */}
       <div className="sr-panel shrink-0 px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-1">
@@ -118,8 +130,18 @@ export function CardPool({ situation, cards, capacity, resources, onCommit, disa
               }}
             >
               <div className="flex items-center justify-between">
-                <span className="sr-label" style={{ color: sm ? sm.color : "var(--sr-mut)", letterSpacing: "0.12em" }}>
-                  {sm ? sm.label : "일반 정책"}
+                <span className="flex items-center gap-1.5">
+                  <span className="sr-label" style={{ color: sm ? sm.color : "var(--sr-mut)", letterSpacing: "0.12em" }}>
+                    {sm ? sm.label : "일반 정책"}
+                  </span>
+                  {c.discounted && (
+                    <span className="sr-label" style={{
+                      color: "var(--stable)", border: "1px solid var(--stable)",
+                      borderRadius: 3, padding: "0 3px", fontSize: "0.5rem", letterSpacing: 0,
+                    }}>
+                      위기대응
+                    </span>
+                  )}
                 </span>
                 <span style={{ fontSize: "0.62rem", color: isSel ? "var(--gold)" : "var(--sr-dim)" }}>
                   {locked ? "🔒" : isSel ? "■ 선정" : "□"}
@@ -134,16 +156,20 @@ export function CardPool({ situation, cards, capacity, resources, onCommit, disa
                 {flavorFor(c.id)}
               </div>
 
-              {/* 코스트 (핍, 숫자 없음) */}
+              {/* 코스트 (핍, 숫자 없음) — 할인 시 원래 칸은 빈 윤곽으로 남겨 절감 표시 */}
               <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
                 <span className="flex items-center gap-1">
                   <span style={{ fontSize: "0.52rem", color: "var(--sr-dim)" }}>재정</span>
-                  <Pips filled={c.fiscal_cost} total={c.fiscal_cost} color="var(--gold)" size={5} />
+                  <Pips filled={c.fiscal_cost}
+                        total={Math.max(c.fiscal_cost, c.base_fiscal_cost ?? c.fiscal_cost)}
+                        color="var(--gold)" size={5} />
                 </span>
-                {sm && c.sector_cost > 0 && (
+                {sm && (c.sector_cost > 0 || (c.base_sector_cost ?? 0) > 0) && (
                   <span className="flex items-center gap-1">
                     <span style={{ fontSize: "0.52rem", color: "var(--sr-dim)" }}>{sm.label}</span>
-                    <Pips filled={c.sector_cost} total={c.sector_cost} color={sm.color} size={5} />
+                    <Pips filled={c.sector_cost}
+                          total={Math.max(c.sector_cost, c.base_sector_cost ?? c.sector_cost)}
+                          color={sm.color} size={5} />
                   </span>
                 )}
               </div>

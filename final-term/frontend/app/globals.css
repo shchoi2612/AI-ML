@@ -143,6 +143,13 @@ body::after {
 @keyframes face-in { from { opacity: 0; } to { opacity: 1; } }
 .face-in { animation: face-in 0.45s ease-out; }
 
+/* 중대 위기 풀스크린 속보 등장 */
+@keyframes sr-crisis-in {
+  0% { opacity: 0; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.sr-crisis-in { animation: sr-crisis-in 0.3s ease-out; }
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--sr-border); border-radius: 3px; }
