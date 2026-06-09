@@ -45,6 +45,13 @@ CARDS = [
         "base_effects": {"debt": -8, "inflation": -3, "morale": -12}, "variance": 3,
         "tags": ["fiscal"],
     },
+    {
+        # 섹터-프리 긴장 대응(기본 수단). 긴장 위기에 섹터 자원 없이도 대응 가능하게 한다.
+        "id": "emergency_diplomacy", "title": "긴급 외교 성명",
+        "sector": None, "fiscal_cost": 2, "sector_cost": 0,
+        "base_effects": {"tension": -8, "morale": 2}, "variance": 2,
+        "tags": ["diplomacy"],
+    },
 
     # ── 에너지 섹터 카드 ──
     {

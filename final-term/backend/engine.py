@@ -6,7 +6,8 @@ from config import (
     HINT_MAGNITUDE, HINT_DIRECTION,
     BASE_FISCAL_CAPACITY, DEBT_CAPACITY_BASELINE, DEBT_CAPACITY_DIVISOR,
     MIN_FISCAL_CAPACITY, SECTOR_KEYS, SECTOR_ACCRUAL_DIVISOR, SECTOR_RESOURCE_CAP,
-    PASSIVE_DRIFT,
+    PASSIVE_DRIFT, GAUGE_FLOOR, DEBT_REDUCTION_FACTOR, EVENT_IMPACT_SCALE,
+    EVENT_RESPONSE_DISCOUNT,
 )
 from etf import calculate_etf_changes
 
@@ -25,7 +26,51 @@ def new_game() -> dict:
         # 코스트/자원 레이어 (v2)
         "sector_resources": {s: 0 for s in SECTOR_KEYS},
         "fiscal_capacity": compute_capacity(INITIAL_STATE),
+        # 이번 턴 이벤트의 직접 충격(게이지) + 강도. select_event가 채우고 apply_cards가 소비.
+        "pending_impact": {},
+        "pending_severity": "light",
     }
+
+
+# ── 위기 대응 핸들 (event response handle) ────────────────────────────
+def _threatened_gauges(impact: dict) -> set:
+    """이벤트가 '악화'시키는 게이지 집합 (부채/인플레/긴장↑, 민심↓)."""
+    out = set()
+    for g, v in (impact or {}).items():
+        if g == "morale":
+            if v < 0:
+                out.add(g)
+        elif v > 0:
+            out.add(g)
+    return out
+
+
+def _card_counters(card: dict, threatened: set) -> bool:
+    """카드가 위협받는 게이지를 '돕는' 방향으로 움직이면 그 위기의 대응 카드다."""
+    eff = card.get("base_effects", {})
+    for g in threatened:
+        v = eff.get(g, 0)
+        if g == "morale" and v > 0:
+            return True
+        if g != "morale" and v < 0:
+            return True
+    return False
+
+
+def effective_cost(card: dict, state: dict) -> tuple[int, int]:
+    """이번 턴 위기 대응 할인을 반영한 (재정 코스트, 섹터 코스트).
+
+    위기가 위협하는 게이지를 돕는 카드는 강도별로 코스트가 깎인다(클램프 0).
+    할인은 코스트(게이팅)에만 적용 — base_effects/ETF/ρ 파이프라인은 불변(firewall).
+    """
+    fiscal = card["fiscal_cost"]
+    sector = card.get("sector_cost", 0)
+    threatened = _threatened_gauges(state.get("pending_impact", {}))
+    if threatened and _card_counters(card, threatened):
+        df, ds = EVENT_RESPONSE_DISCOUNT.get(state.get("pending_severity", "light"), (0, 0))
+        fiscal = max(0, fiscal - df)
+        sector = max(0, sector - ds)
+    return fiscal, sector
 
 
 # ── 코스트/자원 레이어 (v2) ────────────────────────────────────────────
@@ -44,27 +89,29 @@ def refresh_sector_resources(state: dict) -> dict:
     return res
 
 
-def card_affordable(card: dict, capacity: int, resources: dict) -> bool:
-    """단일 카드가 현재 여력/섹터자원으로 감당 가능한지."""
-    if card["fiscal_cost"] > capacity:
+def card_affordable(card: dict, capacity: int, resources: dict, state: dict | None = None) -> bool:
+    """단일 카드가 현재 여력/섹터자원으로 감당 가능한지(위기 대응 할인 반영)."""
+    fiscal, sector_cost = effective_cost(card, state) if state is not None else (
+        card["fiscal_cost"], card.get("sector_cost", 0))
+    if fiscal > capacity:
         return False
     sector = card.get("sector")
-    if sector is not None and card.get("sector_cost", 0) > resources.get(sector, 0):
+    if sector is not None and sector_cost > resources.get(sector, 0):
         return False
     return True
 
 
 def validate_selection(state: dict, cards: list) -> str | None:
-    """선택한 카드 묶음의 총코스트가 예산 내인지 검증. 위반 시 사유 문자열, OK면 None."""
+    """선택한 카드 묶음의 총코스트가 예산 내인지 검증(할인 반영). 위반 시 사유, OK면 None."""
     capacity = compute_capacity(state)
-    total_fiscal = sum(c["fiscal_cost"] for c in cards)
+    total_fiscal = sum(effective_cost(c, state)[0] for c in cards)
     if total_fiscal > capacity:
         return f"재정 여력 초과 (필요 {total_fiscal} > 여력 {capacity})"
     sector_need: dict = {}
     for c in cards:
         s = c.get("sector")
         if s is not None:
-            sector_need[s] = sector_need.get(s, 0) + c.get("sector_cost", 0)
+            sector_need[s] = sector_need.get(s, 0) + effective_cost(c, state)[1]
     for s, need in sector_need.items():
         have = state["sector_resources"].get(s, 0)
         if need > have:
@@ -105,7 +152,8 @@ def _commit(state: dict, gauge_deltas: dict, label: str, etf_deltas: dict | None
     """
     changes_text = []
     for key, delta in gauge_deltas.items():
-        state[key] = max(0, min(100, state[key] + delta))
+        # 게이지별 하한 클램프 — 부채는 MIN_DEBT 밑으로 못 내려감(0으로 "해결" 불가).
+        state[key] = max(GAUGE_FLOOR.get(key, 0), min(100, state[key] + delta))
         sign = "+" if delta > 0 else ""
         changes_text.append(f"{GAUGE_NAMES[key]} {sign}{delta}")
 
@@ -136,26 +184,43 @@ def apply_cards(state: dict, cards: list) -> dict:
     Returns:
         합산 적용된 gauge_deltas dict
     """
-    # 패시브 드리프트부터 깔고(무위=손해), 그 위에 카드 효과를 합산한다.
-    # 단, 드리프트는 게이지에만 반영하고 ETF 신호엔 섞지 않는다(EMH ρ 보호):
-    #   combined(드리프트+정책) → 게이지/gauge_history
-    #   policy(정책만)          → ETF/etf_history
-    combined: dict = dict(PASSIVE_DRIFT)
+    # 섹터 차감액을 '할인 반영(effective_cost)'으로 먼저 확정한다 — pending_* 비우기 전에.
+    sector_spend: dict = {}
+    for c in cards:
+        s = c.get("sector")
+        if s is not None:
+            scost = effective_cost(c, state)[1]
+            if scost:
+                sector_spend[s] = sector_spend.get(s, 0) + scost
+
+    # 정책(카드) 효과부터 합산. 이게 ETF 신호의 유일한 입력이다(EMH ρ 보호).
     policy: dict = {}
     for c in cards:
         d = _roll_deltas(c["base_effects"], c.get("variance", 0), state["turn"])
         for k, v in d.items():
-            combined[k] = combined.get(k, 0) + v
             policy[k] = policy.get(k, 0) + v
+
+    # 부채 감소 댐핑: 정책의 '순 부채 감소'분만 약화(증가는 그대로). 갚기는 더디다.
+    if policy.get("debt", 0) < 0:
+        policy["debt"] = int(round(policy["debt"] * DEBT_REDUCTION_FACTOR))
+
+    # 게이지엔 드리프트 + 이벤트 충격 + 정책을 모두 합산(무위=손해, 위기는 직격).
+    # ETF엔 정책(policy)만 넘긴다 → 드리프트/이벤트 같은 외생 충격은 ρ를 오염시키지 않음.
+    combined: dict = dict(PASSIVE_DRIFT)
+    impact = state.get("pending_impact", None) or {}
+    for k, v in impact.items():
+        combined[k] = combined.get(k, 0) + int(round(v * EVENT_IMPACT_SCALE))
+    for k, v in policy.items():
+        combined[k] = combined.get(k, 0) + v
+    state["pending_impact"] = {}            # 소비 후 비움
+    state["pending_severity"] = "light"
 
     label = " + ".join(c.get("title", c.get("label", "?")) for c in cards) or "정책 보류(패스)"
     deltas = _commit(state, combined, label, etf_deltas=policy)
 
-    # 섹터 자원 차감 (누적 자원만)
-    for c in cards:
-        s = c.get("sector")
-        if s is not None and c.get("sector_cost", 0):
-            state["sector_resources"][s] = max(0, state["sector_resources"][s] - c["sector_cost"])
+    # 섹터 자원 차감 (누적 자원만, 할인 반영분)
+    for s, amt in sector_spend.items():
+        state["sector_resources"][s] = max(0, state["sector_resources"][s] - amt)
 
     return deltas
 
@@ -212,6 +277,8 @@ def select_event(state: dict, events: list) -> dict:
         for e in events:
             if e["id"] == chain_id:
                 state["event_history"].append(e["id"])
+                state["pending_impact"] = dict(e.get("impact", {}))
+                state["pending_severity"] = e.get("severity", "light")
                 return e
 
     # 후보 풀 구성: 해당 티어 + 해금된 캐스케이드
@@ -237,6 +304,8 @@ def select_event(state: dict, events: list) -> dict:
         state["pending_chain"] = event["chain_to"]
 
     state["event_history"].append(event["id"])
+    state["pending_impact"] = dict(event.get("impact", {}))
+    state["pending_severity"] = event.get("severity", "light")
     return event
 
 

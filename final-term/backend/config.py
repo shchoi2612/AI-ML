@@ -98,9 +98,35 @@ SECTOR_KEYS = ("energy", "defense", "semiconductor")
 SECTOR_ACCRUAL_DIVISOR = 5
 SECTOR_RESOURCE_CAP = 20
 
-# 패시브 드리프트: 매 턴 자동으로 악화 (무위=손해). 빠듯한 예산이 의미를 갖게 한다.
-# 가만히 있으면 부채·인플레·긴장↑, 민심↓ → 정책으로 상쇄해야 생존.
-PASSIVE_DRIFT = {"debt": 3, "inflation": 2, "morale": -2, "tension": 2}
+# 패시브 드리프트: 매 턴 자동으로 가벼운 악화. 이벤트가 주(主)압력을 담당하므로
+# 드리프트는 '잔잔한 배경'으로 약화(과거 3/2/-2/2 → 절반). 무위=손해는 이벤트 충격이 보장.
+PASSIVE_DRIFT = {"debt": 2, "inflation": 1, "morale": -1, "tension": 1}
+
+# ── 부채 억제 메커닉 ──
+# 현실의 국가부채처럼: 0으로 "해결"되지 않고, 최선이 악화 둔화/억제다.
+#   (1) 부채 바닥(floor): 부채는 MIN_DEBT 밑으로 못 내려간다 → 절대 0이 안 됨.
+#   (2) 감소 댐핑: 정책의 '부채 감소'분은 DEBT_REDUCTION_FACTOR로 약화 → 갚기 어렵다.
+#       (드리프트/이벤트의 부채 증가는 그대로. 즉 쌓기는 쉽고 줄이기는 더디다.)
+MIN_DEBT = 25
+DEBT_REDUCTION_FACTOR = 0.8
+# 게이지별 하한 (기본 0, 부채만 MIN_DEBT). _commit 클램프에서 사용.
+GAUGE_FLOOR = {"debt": MIN_DEBT, "inflation": 0, "morale": 0, "tension": 0}
+
+# ── 이벤트 강도(severity) 시스템 ──
+# 매 턴 뜨는 이벤트가 게이지를 직접 때린다(드리프트/정책과 별개의 외생 충격).
+# 강도: light(가벼운 사건) / medium(중간 위기) / major(큰 위기 — "이번 턴 큰일났다").
+# 이벤트 충격은 게이지에만 반영하고 ETF 신호엔 넣지 않는다(EMH ρ 보호: ETF=정책만).
+# 전역 튜닝 노브 — 완주율이 너무 낮으면 이 값을 낮춰 충격을 완화한다.
+# 0.80: 탐욕봇 완주율 50%(목표 40~60% 중앙), 사망 원인 균형(부채/민심), 외길 비지배. balance_sim 검증.
+EVENT_IMPACT_SCALE = 0.80
+SEVERITY_LABELS = {"light": "사건", "medium": "위기", "major": "중대 위기"}
+
+# ── 위기 대응 핸들 (event response handle) ──
+# 위기가 게이지를 때리는 동시에, 그 위기를 '막는' 카드를 그 턴 싸게 만든다.
+# 위기가 위협하는 게이지(impact)를 돕는 방향으로 움직이는 카드 = 그 위기의 '대응'.
+# 강도별 코스트 할인 (재정, 섹터). 클램프 0. → 빠듯한 여력으로도 위기 대응이 가능.
+# 섹터-프리 기본 대응(긴급 외교 성명 등)이 있어 초반에도 답이 막히지 않는다(cards 참조).
+EVENT_RESPONSE_DISCOUNT = {"light": (0, 0), "medium": (1, 1), "major": (2, 2)}
 
 # ── LLM ──
 GROQ_MODEL = "llama-3.3-70b-versatile"

@@ -17,9 +17,10 @@ from collections import Counter
 
 from engine import (
     new_game, compute_capacity, refresh_sector_resources,
-    card_affordable, apply_cards, check_game_over,
+    card_affordable, apply_cards, check_game_over, select_event, effective_cost,
 )
 from cards import CARDS
+from events import EVENTS
 from config import GAUGE_KEYS
 
 GAMES = 500
@@ -31,16 +32,17 @@ def stability(state) -> int:
 
 
 def affordable_singles(state, cap):
-    return [c for c in CARDS if card_affordable(c, cap, state["sector_resources"])]
+    return [c for c in CARDS if card_affordable(c, cap, state["sector_resources"], state)]
 
 
-def fits(subset, cap, resources) -> bool:
-    if sum(c["fiscal_cost"] for c in subset) > cap:
+def fits(subset, cap, resources, state) -> bool:
+    # 위기 대응 할인을 반영한 effective_cost로 예산 검사 (engine.validate_selection과 일치).
+    if sum(effective_cost(c, state)[0] for c in subset) > cap:
         return False
     need = {}
     for c in subset:
         if c["sector"]:
-            need[c["sector"]] = need.get(c["sector"], 0) + c["sector_cost"]
+            need[c["sector"]] = need.get(c["sector"], 0) + effective_cost(c, state)[1]
     return all(need[s] <= resources.get(s, 0) for s in need)
 
 
@@ -49,21 +51,33 @@ def affordable_subsets(state, cap, max_cards=3):
     subsets = [[]]
     for r in range(1, min(max_cards, len(singles)) + 1):
         for combo in itertools.combinations(singles, r):
-            if fits(combo, cap, state["sector_resources"]):
+            if fits(combo, cap, state["sector_resources"], state):
                 subsets.append(list(combo))
     return subsets
 
 
 def _apply_base(state, subset):
-    """드리프트 + 카드 base_effects를 결정값으로 적용한 결과 게이지(클램프)."""
-    from config import PASSIVE_DRIFT
+    """드리프트 + 보이는 이벤트 충격 + 카드 base_effects를 결정값으로 적용한 결과 게이지.
+
+    플레이어는 이번 턴 이벤트(pending_impact)를 보고 대응하므로, 탐욕봇 룩어헤드도
+    그 충격을 반영해야 공정하다. 부채 바닥(GAUGE_FLOOR)도 클램프에 반영.
+    """
+    from config import PASSIVE_DRIFT, GAUGE_FLOOR, DEBT_REDUCTION_FACTOR, EVENT_IMPACT_SCALE
     g = {k: state[k] for k in GAUGE_KEYS}
     for k, v in PASSIVE_DRIFT.items():
-        g[k] = max(0, min(100, g[k] + v))
+        g[k] = g[k] + v
+    for k, v in state.get("pending_impact", {}).items():
+        g[k] = g[k] + int(round(v * EVENT_IMPACT_SCALE))
+    # 정책(카드) 합산 + 부채 감소 댐핑 (engine.apply_cards와 동일 규칙)
+    pol = {}
     for c in subset:
         for k, v in c["base_effects"].items():
-            g[k] = max(0, min(100, g[k] + v))
-    return g
+            pol[k] = pol.get(k, 0) + v
+    if pol.get("debt", 0) < 0:
+        pol["debt"] = int(round(pol["debt"] * DEBT_REDUCTION_FACTOR))
+    for k, v in pol.items():
+        g[k] = g[k] + v
+    return {k: max(GAUGE_FLOOR.get(k, 0), min(100, g[k])) for k in GAUGE_KEYS}
 
 
 def survival_score(state, subset) -> float:
@@ -116,14 +130,16 @@ def classify(msg):
 
 def play_one(bot):
     state = new_game()
+    select_event(state, EVENTS)              # 1턴 이벤트 충격 예약
     while True:
         cap = compute_capacity(state)
         sel = bot(state, cap)
-        apply_cards(state, sel)
+        apply_cards(state, sel)              # 드리프트 + 이벤트 충격 + 정책 적용
         over = check_game_over(state)
         if over:
             return classify(over), state["turn"] - 1
         refresh_sector_resources(state)
+        select_event(state, EVENTS)          # 다음 턴 이벤트 충격 예약
 
 
 def run(name, bot, games=GAMES):
