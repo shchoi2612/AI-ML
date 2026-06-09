@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>EconSim 백엔드 검증 (M0 hero 루프, 계약 v2)</title>
+<!-- 백엔드 검증 전용. 디자인 X. 진짜 카드 UI는 final-term/frontend(석원님). -->
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  body{font-family:monospace;margin:16px;background:#111;color:#ddd}
+  #chart{border:1px solid #444;margin:8px 0}
+  button{font-family:monospace;font-size:13px;margin:3px;padding:6px 8px;
+         background:#222;color:#ddd;border:1px solid #555;cursor:pointer;text-align:left}
+  button:hover:not(:disabled){background:#333}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.sel{border-color:#2ecc71;background:#1b3a26}
+  .gauges span,.budget span{display:inline-block;margin-right:14px}
+  .budget{color:#7bd;margin:6px 0}
+  #cards{display:flex;flex-wrap:wrap;max-width:760px;margin:6px 0}
+  #cards button{width:240px;white-space:normal}
+  .cost{color:#fb0}
+  .hint{color:#888;font-size:11px}
+  #run{background:#163;border-color:#2ecc71;font-size:14px;padding:8px 12px}
+  #situation{margin:8px 0}
+  #log{white-space:pre-wrap;color:#7a7;font-size:12px;max-height:120px;overflow:auto;
+       border-top:1px solid #333;margin-top:8px;padding-top:6px}
+  .over{color:#e55;font-weight:bold}
+</style>
+</head>
+<body>
+<h2>EconSim 백엔드 검증 — 정책 카드 → 차트 루프 (M0, 계약 v2)</h2>
+<div class="gauges" id="gauges"></div>
+<div class="budget" id="budget"></div>
+<div id="chart"></div>
+<div id="legend" class="hint"></div>
+<div id="situation"></div>
+<div id="cards"></div>
+<button id="run" onclick="execute()">▶ 실행 (선택 카드로 턴 진행 / 선택 없으면 패스)</button>
+<button onclick="newGame()">🔄 새 게임</button>
+<div id="log"></div>
+
+<script>
+const ETFS = [
+  ["semiconductor", "#e74c3c"], ["energy", "#f39c12"], ["finance", "#3498db"],
+  ["defense", "#2ecc71"], ["consumer", "#9b59b6"],
+];
+const BASE = Math.floor(Date.UTC(2024, 0, 1) / 1000);
+const tTime = (turn) => BASE + turn * 86400;  // 턴 1개 = 하루
+let gameId = null, chart = null, series = {};
+let pool = [], selected = new Set(), capacity = 0, resources = {};
+
+function log(msg) {
+  const el = document.getElementById("log");
+  el.textContent = msg + "\n" + el.textContent;
+}
+
+function initChart() {
+  document.getElementById("chart").innerHTML = "";
+  chart = LightweightCharts.createChart(document.getElementById("chart"),
+    { width: 720, height: 340,
+      layout: { background: { color: "#111" }, textColor: "#ddd" },
+      grid: { vertLines: { color: "#222" }, horzLines: { color: "#222" } } });
+  series = {};
+  const legend = [];
+  for (const [k, c] of ETFS) {
+    series[k] = chart.addLineSeries({ color: c, lineWidth: 2 });
+    legend.push(`<span style="color:${c}">● ${k}</span>`);
+  }
+  document.getElementById("legend").innerHTML = legend.join("  ");
+}
+
+function plot(turn, etfPrices) {
+  for (const [k] of ETFS) series[k].update({ time: tTime(turn), value: etfPrices[k] });
+}
+
+function renderGauges(g) {
+  document.getElementById("gauges").innerHTML = Object.entries(g)
+    .map(([k, v]) => `<span>${k}: <b>${v}</b></span>`).join("");
+}
+
+function renderBudget() {
+  // 선택된 카드의 누적 코스트 계산
+  let fc = 0; const sc = {};
+  for (const id of selected) {
+    const c = pool.find(x => x.id === id);
+    if (!c) continue;
+    fc += c.fiscal_cost;
+    if (c.sector) sc[c.sector] = (sc[c.sector] || 0) + c.sector_cost;
+  }
+  const res = Object.entries(resources)
+    .map(([k, v]) => `${k} ${v}${sc[k] ? `(-${sc[k]})` : ""}`).join(", ");
+  document.getElementById("budget").innerHTML =
+    `<span>재정여력: <b>${fc}/${capacity}</b></span><span>섹터자원: ${res}</span>`;
+}
+
+function renderSituation(s, turn) {
+  document.getElementById("situation").innerHTML =
+    s ? `<b>[턴 ${turn}] ${s.title}</b><br>${s.desc}` : "";
+}
+
+function renderCards(cardPool) {
+  pool = cardPool;
+  const div = document.getElementById("cards");
+  div.innerHTML = "";
+  for (const c of pool) {
+    const b = document.createElement("button");
+    const cost = `💰${c.fiscal_cost}` + (c.sector ? ` ⚙${c.sector}:${c.sector_cost}` : "");
+    b.innerHTML = `<b>${c.title}</b><br><span class="cost">${cost}</span>` +
+      `<br><span class="hint">${c.hint}</span>`;
+    b.disabled = !c.affordable;
+    if (selected.has(c.id)) b.classList.add("sel");
+    b.onclick = () => toggle(c.id);
+    div.appendChild(b);
+  }
+  renderBudget();
+}
+
+function toggle(id) {
+  if (selected.has(id)) selected.delete(id); else selected.add(id);
+  renderCards(pool);  // 선택 표시 + 코스트 갱신
+}
+
+async function newGame() {
+  selected = new Set();
+  const r = await fetch("/game/new", { method: "POST" });
+  const j = await r.json();
+  gameId = j.game_id;
+  capacity = j.fiscal_capacity; resources = j.sector_resources;
+  initChart();
+  plot(j.turn, j.etf_prices);          // 턴1 초기값(전부 100)
+  renderGauges(j.gauges);
+  renderSituation(j.situation, j.turn);
+  renderCards(j.card_pool);
+  log(`새 게임 ${gameId.slice(0,8)} — 상황: ${j.situation.title} (여력 ${capacity}, 카드 ${j.card_pool.length}장)`);
+}
+
+async function execute() {
+  const ids = [...selected];
+  const r = await fetch("/game/action", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_id: gameId, card_ids: ids }),
+  });
+  if (!r.ok) { const e = await r.json(); log(`❌ 거부(${r.status}): ${e.detail}`); return; }
+  const j = await r.json();
+  selected = new Set();
+  plot(j.turn, j.etf_prices);          // ★ 여기서 차트에 새 점이 찍힘 = hero
+  renderGauges(j.gauges);
+  const ch = Object.entries(j.etf_changes).map(([k, v]) => `${k} ${v}%`).join(", ");
+  log(`턴 ${j.turn}: [${ids.join(", ") || "패스"}] → ETF ${ch}`);
+  if (j.game_over) {
+    document.getElementById("situation").innerHTML = `<div class="over">GAME OVER — ${j.game_over}</div>`;
+    document.getElementById("cards").innerHTML = "";
+    log("게임 종료: " + j.game_over);
+  } else {
+    capacity = j.fiscal_capacity; resources = j.sector_resources;
+    renderSituation(j.next_situation, j.turn);
+    renderCards(j.card_pool);
+  }
+}
+
+newGame();  // 페이지 열면 자동 시작
+</script>
+</body>
+</html>

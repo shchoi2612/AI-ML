@@ -1,0 +1,5 @@
+# 데이터 분석 전용 의존성 (API 서버 런타임과 분리)
+# 설치: uv pip install -r data/requirements.txt
+yfinance==1.4.1
+numpy
+pandas

@@ -1,11 +1,4 @@
-"""이벤트 정의 — 티어/체인/캐스케이드 + 강도(severity)/직접 충격(impact) 시스템.
-
-severity: light(가벼운 사건) / medium(중간 위기) / major(큰 위기).
-impact  : 이벤트가 그 턴 게이지에 직접 가하는 외생 충격(드리프트/정책과 별개).
-          major일수록 크게 때려 "이번 턴 큰일났다"가 느껴지게.
-          (게이지에만 적용, ETF 신호엔 안 들어감 — EMH ρ 보호. engine 참조)
-choices : v1 잔존 자산(선택지별 base_effects). v2는 카드풀이 대체하나 narration 등에서 참조.
-"""
+"""이벤트 정의 — 티어/체인/캐스케이드 시스템."""
 
 EVENTS = [
     # ══════════════════════════════════════
@@ -17,8 +10,6 @@ EVENTS = [
         "desc": "중동 지역 무력 충돌이 격화되며 국제 유가가 배럴당 $120을 돌파했습니다.",
         "tier": 1,
         "tags": ["energy", "international"],
-        "severity": "medium",
-        "impact": {"inflation": 7, "tension": 4},
         "chain_to": "oil_aftermath",
         "chain_prob": 0.5,
         "choices": [
@@ -36,8 +27,6 @@ EVENTS = [
         "desc": "유가 급등 여파로 물류비가 치솟고, 항공·운송업계가 긴급 지원을 요청했습니다.",
         "tier": 1,
         "tags": ["energy", "domestic"],
-        "severity": "light",
-        "impact": {"inflation": 4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -55,8 +44,6 @@ EVENTS = [
         "desc": "주요 반도체 생산국이 수출 규제를 발표, 글로벌 공급망에 충격이 가해졌습니다.",
         "tier": 1,
         "tags": ["tech", "trade"],
-        "severity": "medium",
-        "impact": {"inflation": 5, "tension": 4},
         "chain_to": "semiconductor_reshoring",
         "chain_prob": 0.4,
         "choices": [
@@ -74,8 +61,6 @@ EVENTS = [
         "desc": "공급망 위기를 계기로 국내 반도체 생산라인 유치 논의가 본격화됐습니다.",
         "tier": 1,
         "tags": ["tech", "domestic"],
-        "severity": "light",
-        "impact": {"inflation": 3},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -93,8 +78,6 @@ EVENTS = [
         "desc": "남부 지방에 역대급 태풍이 상륙, 수조 원의 피해가 예상됩니다.",
         "tier": 1,
         "tags": ["domestic", "crisis"],
-        "severity": "medium",
-        "impact": {"morale": -6, "debt": 5},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -112,8 +95,6 @@ EVENTS = [
         "desc": "최저임금 동결에 반발해 주요 산업 노동자들이 총파업을 예고했습니다.",
         "tier": 1,
         "tags": ["domestic", "social"],
-        "severity": "medium",
-        "impact": {"morale": -7, "inflation": 3},
         "chain_to": "strike_aftermath",
         "chain_prob": 0.5,
         "choices": [
@@ -131,8 +112,6 @@ EVENTS = [
         "desc": "노동 분쟁 이후 기업들의 해외 이전 검토 소식이 전해지고 있습니다.",
         "tier": 1,
         "tags": ["domestic", "social"],
-        "severity": "light",
-        "impact": {"morale": -4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -150,8 +129,6 @@ EVENTS = [
         "desc": "신용등급 하향 우려로 외국인 투자자들이 대규모 매도에 나섰습니다.",
         "tier": 1,
         "tags": ["finance", "international"],
-        "severity": "medium",
-        "impact": {"debt": 6, "tension": 5},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -169,8 +146,6 @@ EVENTS = [
         "desc": "글로벌 수요 급증으로 수출이 전년 대비 25% 증가, 사상 최대 무역흑자를 기록했습니다.",
         "tier": 1,
         "tags": ["trade", "positive"],
-        "severity": "light",
-        "impact": {"debt": -4, "morale": 4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -191,8 +166,6 @@ EVENTS = [
         "desc": "대형 헤지펀드들이 원화 공매도에 나서며 환율이 급등하고 있습니다.",
         "tier": 2,
         "tags": ["finance", "international"],
-        "severity": "medium",
-        "impact": {"inflation": 6, "debt": 5},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -210,8 +183,6 @@ EVENTS = [
         "desc": "주요 도시 주택 가격이 1년 새 40% 급등, 자산 버블 우려가 커지고 있습니다.",
         "tier": 2,
         "tags": ["domestic", "finance"],
-        "severity": "medium",
-        "impact": {"inflation": 6, "morale": -4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -229,8 +200,6 @@ EVENTS = [
         "desc": "새로운 변이 바이러스가 급속히 확산되며 의료 시스템에 부하가 걸리고 있습니다.",
         "tier": 2,
         "tags": ["domestic", "crisis"],
-        "severity": "major",
-        "impact": {"morale": -10, "debt": 8},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -248,8 +217,6 @@ EVENTS = [
         "desc": "주요 동맹국이 분쟁 지역 파병을 공식 요청했습니다. 국내 여론이 분열되고 있습니다.",
         "tier": 2,
         "tags": ["international", "military"],
-        "severity": "medium",
-        "impact": {"tension": 6, "morale": -4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -267,8 +234,6 @@ EVENTS = [
         "desc": "국제 기후 협약에서 2030년까지 탄소 배출 50% 감축 목표가 제시됐습니다.",
         "tier": 2,
         "tags": ["international", "energy"],
-        "severity": "medium",
-        "impact": {"inflation": 4, "tension": 3},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -286,8 +251,6 @@ EVENTS = [
         "desc": "경쟁국이 주력 수출품에 45% 관세를 부과, 보복 관세 논쟁이 격화됩니다.",
         "tier": 2,
         "tags": ["trade", "international"],
-        "severity": "medium",
-        "impact": {"inflation": 6, "tension": 6},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -308,8 +271,6 @@ EVENTS = [
         "desc": "국제 신용평가사가 국가 신용등급을 한 단계 하향 조정했습니다.",
         "tier": 3,
         "tags": ["finance", "crisis"],
-        "severity": "major",
-        "impact": {"debt": 12, "morale": -6},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -327,8 +288,6 @@ EVENTS = [
         "desc": "고급 인력의 해외 이민이 급증, 핵심 산업의 경쟁력 저하 우려가 커지고 있습니다.",
         "tier": 3,
         "tags": ["domestic", "social"],
-        "severity": "light",
-        "impact": {"morale": -4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -346,8 +305,6 @@ EVENTS = [
         "desc": "북방 세력의 핵 실험 강행으로 국제 사회 긴장이 극도로 고조됐습니다.",
         "tier": 3,
         "tags": ["international", "military"],
-        "severity": "major",
-        "impact": {"tension": 15, "morale": -5},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -365,8 +322,6 @@ EVENTS = [
         "desc": "세계 경제가 동반 침체에 빠지며 수출이 급감하고 금융시장이 요동치고 있습니다.",
         "tier": 3,
         "tags": ["finance", "trade", "crisis"],
-        "severity": "major",
-        "impact": {"debt": 10, "morale": -8, "inflation": 4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -387,8 +342,6 @@ EVENTS = [
         "desc": "IMF가 국가 부채 수준에 대해 공식 경고를 발표했습니다. 구조조정 압박이 거세지고 있습니다.",
         "tier": 1,
         "tags": ["cascade_debt", "finance"],
-        "severity": "medium",
-        "impact": {"debt": 7, "morale": -5},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -406,8 +359,6 @@ EVENTS = [
         "desc": "민심 악화로 전국 주요 도시에서 대규모 시위가 발생했습니다. 일부 지역에서 충돌이 보고됩니다.",
         "tier": 1,
         "tags": ["cascade_morale", "social"],
-        "severity": "medium",
-        "impact": {"morale": -8, "tension": 4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -425,8 +376,6 @@ EVENTS = [
         "desc": "인플레이션 공포로 시중 은행에 예금 인출 사태가 발생하고 있습니다.",
         "tier": 1,
         "tags": ["cascade_inflation", "finance"],
-        "severity": "major",
-        "impact": {"inflation": 12, "morale": -6},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [
@@ -444,8 +393,6 @@ EVENTS = [
         "desc": "인접국 군함이 영해를 침범, 군사적 긴장이 극도로 높아졌습니다.",
         "tier": 1,
         "tags": ["cascade_tension", "military"],
-        "severity": "major",
-        "impact": {"tension": 14, "debt": 4},
         "chain_to": None,
         "chain_prob": 0,
         "choices": [

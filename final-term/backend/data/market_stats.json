@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "source": "yfinance",
+    "start_date": "2015-01-01",
+    "sector_proxy": {
+      "semiconductor": "SOXX",
+      "energy": "XLE",
+      "finance": "XLF",
+      "defense": "ITA",
+      "consumer": "XLP"
+    },
+    "n_observations": 2867,
+    "note": "auto_adjust=True (수정종가), 로그수익률 기준. B-18에서 엔진 반영."
+  },
+  "volatility_daily": {
+    "semiconductor": 0.02035,
+    "energy": 0.01851,
+    "finance": 0.01373,
+    "defense": 0.01415,
+    "consumer": 0.0092
+  },
+  "volatility_annual": {
+    "semiconductor": 0.3231,
+    "energy": 0.2938,
+    "finance": 0.218,
+    "defense": 0.2246,
+    "consumer": 0.146
+  },
+  "volatility_relative": {
+    "semiconductor": 2.212,
+    "energy": 2.012,
+    "finance": 1.493,
+    "defense": 1.538,
+    "consumer": 1.0
+  },
+  "correlation_matrix": {
+    "semiconductor": {
+      "semiconductor": 1.0,
+      "energy": 0.414,
+      "finance": 0.588,
+      "defense": 0.576,
+      "consumer": 0.395
+    },
+    "energy": {
+      "semiconductor": 0.414,
+      "energy": 1.0,
+      "finance": 0.667,
+      "defense": 0.622,
+      "consumer": 0.405
+    },
+    "finance": {
+      "semiconductor": 0.588,
+      "energy": 0.667,
+      "finance": 1.0,
+      "defense": 0.767,
+      "consumer": 0.599
+    },
+    "defense": {
+      "semiconductor": 0.576,
+      "energy": 0.622,
+      "finance": 0.767,
+      "defense": 1.0,
+      "consumer": 0.537
+    },
+    "consumer": {
+      "semiconductor": 0.395,
+      "energy": 0.405,
+      "finance": 0.599,
+      "defense": 0.537,
+      "consumer": 1.0
+    }
+  }
+}

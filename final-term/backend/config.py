@@ -81,6 +81,53 @@ HINT_DIRECTION = {
     "tension": ("고조", "완화"),
 }
 
+# ── 코스트/자원 레이어 (v2 카드 시스템) ──
+# 매 턴 재정 여력(fiscal capacity): 부채가 높을수록 줄어든다 (현실 제약 직역).
+#   capacity = BASE_FISCAL_CAPACITY - max(0, debt - DEBT_CAPACITY_BASELINE)//DEBT_CAPACITY_DIVISOR
+#   (최소 MIN_FISCAL_CAPACITY로 클램프)
+#   예: debt 50→4, debt 70→2, debt 90→1  (빠듯하게: 매 턴 1~2장만)
+BASE_FISCAL_CAPACITY = 4
+DEBT_CAPACITY_BASELINE = 50
+DEBT_CAPACITY_DIVISOR = 10
+MIN_FISCAL_CAPACITY = 1
+
+# 섹터 자원: 섹터 ETF가 100을 넘으면 매 턴 적립 → 그 섹터 카드 발동 재원.
+#   accrue = max(0, (etf_price - 100)//SECTOR_ACCRUAL_DIVISOR), 상한 SECTOR_RESOURCE_CAP
+# SECTOR_KEYS는 ETF_KEYS의 부분집합 (자원 게이팅 대상, 데모는 3섹터)
+SECTOR_KEYS = ("energy", "defense", "semiconductor")
+SECTOR_ACCRUAL_DIVISOR = 5
+SECTOR_RESOURCE_CAP = 20
+
+# 패시브 드리프트: 매 턴 자동으로 가벼운 악화. 이벤트가 주(主)압력을 담당하므로
+# 드리프트는 '잔잔한 배경'으로 약화(과거 3/2/-2/2 → 절반). 무위=손해는 이벤트 충격이 보장.
+PASSIVE_DRIFT = {"debt": 2, "inflation": 1, "morale": -1, "tension": 1}
+
+# ── 부채 억제 메커닉 ──
+# 현실의 국가부채처럼: 0으로 "해결"되지 않고, 최선이 악화 둔화/억제다.
+#   (1) 부채 바닥(floor): 부채는 MIN_DEBT 밑으로 못 내려간다 → 절대 0이 안 됨.
+#   (2) 감소 댐핑: 정책의 '부채 감소'분은 DEBT_REDUCTION_FACTOR로 약화 → 갚기 어렵다.
+#       (드리프트/이벤트의 부채 증가는 그대로. 즉 쌓기는 쉽고 줄이기는 더디다.)
+MIN_DEBT = 25
+DEBT_REDUCTION_FACTOR = 0.8
+# 게이지별 하한 (기본 0, 부채만 MIN_DEBT). _commit 클램프에서 사용.
+GAUGE_FLOOR = {"debt": MIN_DEBT, "inflation": 0, "morale": 0, "tension": 0}
+
+# ── 이벤트 강도(severity) 시스템 ──
+# 매 턴 뜨는 이벤트가 게이지를 직접 때린다(드리프트/정책과 별개의 외생 충격).
+# 강도: light(가벼운 사건) / medium(중간 위기) / major(큰 위기 — "이번 턴 큰일났다").
+# 이벤트 충격은 게이지에만 반영하고 ETF 신호엔 넣지 않는다(EMH ρ 보호: ETF=정책만).
+# 전역 튜닝 노브 — 완주율이 너무 낮으면 이 값을 낮춰 충격을 완화한다.
+# 0.80: 탐욕봇 완주율 50%(목표 40~60% 중앙), 사망 원인 균형(부채/민심), 외길 비지배. balance_sim 검증.
+EVENT_IMPACT_SCALE = 0.80
+SEVERITY_LABELS = {"light": "사건", "medium": "위기", "major": "중대 위기"}
+
+# ── 위기 대응 핸들 (event response handle) ──
+# 위기가 게이지를 때리는 동시에, 그 위기를 '막는' 카드를 그 턴 싸게 만든다.
+# 위기가 위협하는 게이지(impact)를 돕는 방향으로 움직이는 카드 = 그 위기의 '대응'.
+# 강도별 코스트 할인 (재정, 섹터). 클램프 0. → 빠듯한 여력으로도 위기 대응이 가능.
+# 섹터-프리 기본 대응(긴급 외교 성명 등)이 있어 초반에도 답이 막히지 않는다(cards 참조).
+EVENT_RESPONSE_DISCOUNT = {"light": (0, 0), "medium": (1, 1), "major": (2, 2)}
+
 # ── LLM ──
 GROQ_MODEL = "llama-3.3-70b-versatile"
 NARRATION_MAX_TOKENS = 300
